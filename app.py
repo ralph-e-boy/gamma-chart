@@ -119,32 +119,31 @@ bar_mode_val = "stack" if bar_mode == "Stacked" else "group"
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
 
-# Darker, more subdued colors for DTE values, following color wheel order for better contrast in dark mode
+# Modern, cool color palette for dark mode
 def get_dte_color(dte, max_dte):
-    # Darker, more subdued color palette in color wheel order
-    dark_colors = [
-        "#CC2222",  # Dark Red
-        "#996633",  # Brown (instead of bright orange)
-        "#CCAA00",  # Dark Gold
-        "#227722",  # Dark Green
-        "#2255AA",  # Dark Blue
-        "#662288",  # Dark Purple
-        "#AA2277",  # Dark Pink
-        "#555555",  # Darker Gray (for additional DTEs)
-        "#006666",  # Dark Teal
-        "#884400",  # Dark Brown
-        "#007744",  # Dark Mint
-        "#663388",  # Dark Lavender
+    # Modern color palette inspired by popular dark mode designs
+    modern_colors = [
+        "#FF5252",  # Coral Red
+        "#7986CB",  # Indigo
+        "#4DB6AC",  # Teal
+        "#FFB74D",  # Amber
+        "#9575CD",  # Deep Purple
+        "#4FC3F7",  # Light Blue
+        "#81C784",  # Light Green
+        "#FF8A65",  # Deep Orange
+        "#64B5F6",  # Blue
+        "#A1887F",  # Brown
+        "#E57373",  # Light Red
+        "#BA68C8",  # Purple
     ]
     
     # Special case for 0 DTE
     if dte == 0:
-        return "#990000"  # Dark red for 0 DTE
+        return "#F44336"  # Material Design Red
     
-    # For other DTEs, assign colors in order from the dark palette
-    # This ensures each DTE gets a distinct color following the color wheel
-    color_index = min(dte - 1, len(dark_colors) - 1)
-    return dark_colors[color_index]
+    # For other DTEs, assign colors in order from the modern palette
+    color_index = min(dte - 1, len(modern_colors) - 1)
+    return modern_colors[color_index]
 
 # Create custom hover template
 def format_number(num):
