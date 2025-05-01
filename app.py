@@ -6,9 +6,9 @@ import re
 from datetime import datetime
 
 st.set_page_config(layout="wide")
-st.header("Gamma Exposure Chart")
 
 # File upload moved to sidebar
+st.sidebar.subheader("Gamma Exposure Chart")
 try:
     with open("quotedata.csv", "r") as f:
         lines = f.read().splitlines()
@@ -40,7 +40,7 @@ if name_match and quote_match:
     color = "green" if change >= 0 else "red"
     st.markdown(f"""
     <table style='width:100%; font-size:18px;'>
-        <thead><tr><th>Underlying</th><th>Last</th><th>Bid</th><th>Ask</th></tr></thead>
+        <thead><tr><th>Symbol</th><th>Last</th><th>Bid</th><th>Ask</th></tr></thead>
         <tbody><tr>
             <td><b>{name}</b></td>
             <td style='color:{color}'><b>{last:.2f} ({change:+.2f})</b></td>
@@ -212,7 +212,7 @@ fig.update_layout(
     barmode=bar_mode_val,
     xaxis_title="Gamma Exposure",
     yaxis_title="Strike Price",
-    yaxis=dict(autorange="reversed", showgrid=True, gridcolor="lightgray"),
+    yaxis=dict(autorange=True, showgrid=True, gridcolor="lightgray"),
     xaxis=dict(showgrid=True, gridcolor="lightgray"),
     height=800
 )
