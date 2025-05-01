@@ -8,16 +8,13 @@ from datetime import datetime
 st.set_page_config(layout="wide")
 st.title("Gamma Exposure Chart")
 
-uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
-if uploaded_file:
-    lines = uploaded_file.read().decode("utf-8").splitlines()
-else:
-    try:
-        with open("quotedata.csv", "r") as f:
-            lines = f.read().splitlines()
-    except FileNotFoundError:
-        st.error("No file uploaded and 'quotedata.csv' not found.")
-        st.stop()
+# File upload moved to sidebar
+try:
+    with open("quotedata.csv", "r") as f:
+        lines = f.read().splitlines()
+except FileNotFoundError:
+    st.error("'quotedata.csv' not found and no file uploaded.")
+    st.stop()
 
 # Check structure
 if len(lines) < 4:
@@ -99,6 +96,11 @@ if grouped.empty:
 
 bar_mode = st.sidebar.radio("Bar Mode", ["Stacked", "Grouped (side-by-side)"], index=0)
 bar_mode_val = "stack" if bar_mode == "Stacked" else "relative"
+
+# File uploader in sidebar
+uploaded_file = st.sidebar.file_uploader("Upload your CSV file", type=["csv"])
+if uploaded_file:
+    lines = uploaded_file.read().decode("utf-8").splitlines()
 
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
