@@ -111,8 +111,8 @@ if grouped.empty:
     st.warning("No data in selected range.")
     st.stop()
 
-bar_mode = st.sidebar.radio("Bar Mode", ["Stacked", "Grouped (side-by-side)"], index=0)
-bar_mode_val = "stack" if bar_mode == "Stacked" else "relative"
+bar_mode = st.sidebar.radio("Bar Mode", ["Stacked", "Grouped (side-by-side)"], index=1)
+bar_mode_val = "stack" if bar_mode == "Stacked" else "group"
 
 # File uploader has been moved to the top of the script
 
@@ -189,9 +189,10 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=True,
-        width=0.7,  # Reduced width to prevent overlap
+        width=0.5,  # Further reduced width to prevent overlap
         hovertemplate=put_hovertemplate,
-        customdata=customdata
+        customdata=customdata,
+        offset=0  # Ensure proper alignment
     ))
     
     fig.add_trace(go.Bar(
@@ -202,9 +203,10 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=False,
-        width=0.7,  # Reduced width to prevent overlap
+        width=0.5,  # Further reduced width to prevent overlap
         hovertemplate=put_hovertemplate,
-        customdata=customdata
+        customdata=customdata,
+        offset=0  # Ensure proper alignment
     ))
 
 fig.add_shape(type="line", x0=0, x1=0,
@@ -247,11 +249,25 @@ fig.update_layout(
         tickmode="array",
         tickvals=y_ticks,
         dtick=5,  # Grid lines every 5 points
+        fixedrange=False,  # Allow zooming on y-axis
     ),
-    xaxis=dict(showgrid=True, gridcolor="lightgray"),
-    height=1000,  # Increased height for better spacing
-    bargap=0.3,   # Increased gap between bars
-    bargroupgap=0.2  # Added gap between bar groups
+    xaxis=dict(
+        showgrid=True, 
+        gridcolor="lightgray",
+        fixedrange=False,  # Allow zooming on x-axis
+    ),
+    height=1200,  # Further increased height for better spacing
+    bargap=0.4,   # Further increased gap between bars
+    bargroupgap=0.25,  # Increased gap between bar groups
+    uniformtext=dict(mode="hide", minsize=10),  # Ensure text is readable
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="center",
+        x=0.5
+    ),
+    margin=dict(l=50, r=50, t=80, b=50)  # Add more margin for better spacing
 )
 
 st.plotly_chart(fig, use_container_width=True)
