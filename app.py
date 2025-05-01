@@ -4,24 +4,17 @@ import pandas as pd
 import plotly.graph_objects as go
 import re
 from datetime import datetime
-from io import StringIO
 
 st.set_page_config(layout="wide")
 
-# File upload in sidebar
+# File upload moved to sidebar
 st.sidebar.subheader("Gamma Exposure Chart")
-uploaded_file = st.sidebar.file_uploader("Upload a CSV file of options chain data from https://www.cboe.com/delayed_quotes/spy/quote_table", type=["csv"])
-
-# Get data from uploaded file or default file
-if uploaded_file:
-    lines = uploaded_file.read().decode("utf-8").splitlines()
-else:
-    try:
-        with open("quotedata.csv", "r") as f:
-            lines = f.read().splitlines()
-    except FileNotFoundError:
-        st.error("'quotedata.csv' not found and no file uploaded.")
-        st.stop()
+try:
+    with open("quotedata.csv", "r") as f:
+        lines = f.read().splitlines()
+except FileNotFoundError:
+    st.error("'quotedata.csv' not found and no file uploaded.")
+    st.stop()
 
 # Check structure
 if len(lines) < 4:
@@ -111,33 +104,22 @@ if grouped.empty:
     st.warning("No data in selected range.")
     st.stop()
 
-bar_mode = st.sidebar.radio("Bar Mode", ["Stacked", "Grouped (side-by-side)"], index=1)
-bar_mode_val = "stack" if bar_mode == "Stacked" else "group"
+bar_mode = st.sidebar.radio("Bar Mode", ["Stacked", "Grouped (side-by-side)"], index=0)
+bar_mode_val = "stack" if bar_mode == "Stacked" else "relative"
 
-# File uploader has been moved to the top of the script
+# File uploader in sidebar
+uploaded_file = st.sidebar.file_uploader("Upload a CSV file of options chain data from https://www.cboe.com/delayed_quotes/spy/quote_table", type=["csv"])
+if uploaded_file:
+    lines = uploaded_file.read().decode("utf-8").splitlines()
 
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
 
-# Use the specified color palette
-def get_dte_color(dte, max_dte):
-    # Specified color palette with additional colors
-    colors = [
-        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
-        "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
-        "#bcbd22", "#17becf", "#04879C", "#0C3C78", "#F6C90E",
-        # Extended with variations to reach 20 colors
-        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
-        "#9467bd", "#8c564b", "#e377c2"
-    ]
-    
-    # Special case for 0 DTE
-    if dte == 0:
-        return "#d62728"  # Red from the palette
-    
-    # For other DTEs, assign colors in order from the palette
-    color_index = min(dte - 1, len(colors) - 1)
-    return colors[color_index]
+colors = [
+    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
+    "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
+    "#bcbd22", "#17becf"
+]
 
 # Create custom hover template
 def format_number(num):
@@ -151,15 +133,11 @@ def format_number(num):
         return f"{num:.0f}"
 
 fig = go.Figure()
-# Sort DTEs from smallest to largest for legend ordering
-sorted_dtes_asc = sorted(sorted_dtes)
-max_dte_value = max(sorted_dtes_asc) if sorted_dtes_asc else 1
-for i, dte in enumerate(sorted_dtes_asc):
-    color = get_dte_color(dte, max_dte_value)
+for i, dte in enumerate(sorted_dtes):
+    color = colors[i % len(colors)]
     sub = grouped[grouped["DTE"] == dte]
     
     # Calculate net gamma exposure for hover text
-    sub = sub.copy()  # Create a copy to avoid the SettingWithCopyWarning
     sub["net_gamma"] = sub["call_gamma_expo"] + sub["put_gamma_expo"]
     
     # Create hover template for puts
@@ -206,10 +184,9 @@ for i, dte in enumerate(sorted_dtes_asc):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=True,
-        width=0.5,  # Further reduced width to prevent overlap
+        width=0.7,
         hovertemplate=put_hovertemplate,
-        customdata=customdata,
-        offset=0  # Ensure proper alignment
+        customdata=customdata
     ))
     
     fig.add_trace(go.Bar(
@@ -220,13 +197,21 @@ for i, dte in enumerate(sorted_dtes_asc):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=False,
-        width=0.5,  # Further reduced width to prevent overlap
+        width=0.7,
         hovertemplate=put_hovertemplate,
-        customdata=customdata,
-        offset=0  # Ensure proper alignment
+        customdata=customdata
     ))
 
-# Note: These shapes are now added in the update_layout shapes list
+fig.add_shape(type="line", x0=0, x1=0,
+              y0=grouped["Strike"].min() - 5, y1=grouped["Strike"].max() + 5,
+              line=dict(color="black", width=2))
+
+fig.add_shape(type="line",
+              x0=grouped["put_gamma_expo"].min(),
+              x1=grouped["call_gamma_expo"].max(),
+              y0=spot_price,
+              y1=spot_price,
+              line=dict(color="blue", width=2, dash="dot"))
 
 fig.add_annotation(
     x=grouped["put_gamma_expo"].min(),
@@ -235,78 +220,17 @@ fig.add_annotation(
     showarrow=False,
     xanchor="left",
     yshift=10,
-    font=dict(color="green", size=14),
+    font=dict(color="blue", size=14),
     bgcolor="rgba(255,255,255,0.7)"
 )
 
-# Calculate y-axis tick values (every 5 points)
-min_strike = grouped["Strike"].min()
-max_strike = grouped["Strike"].max()
-y_tick_start = 5 * (min_strike // 5)  # Round down to nearest 5
-y_tick_end = 5 * (max_strike // 5 + 1)  # Round up to nearest 5
-y_ticks = list(range(int(y_tick_start), int(y_tick_end) + 5, 5))
-
 fig.update_layout(
-    barmode="group",  # Force grouped mode to prevent overlap
+    barmode=bar_mode_val,
     xaxis_title="Gamma Exposure",
     yaxis_title="Strike Price",
-    yaxis=dict(
-        autorange=True, 
-        showgrid=True, 
-        gridcolor="#666666",  # Darker gray for horizontal grid lines
-        tickmode="array",
-        tickvals=y_ticks,
-        dtick=5,  # Grid lines every 5 points
-        fixedrange=False,  # Allow zooming on y-axis
-    ),
-    xaxis=dict(
-        showgrid=False,  # Remove vertical grid marks
-        fixedrange=False,  # Allow zooming on x-axis
-    ),
-    height=1200,  # Further increased height for better spacing
-    bargap=0.4,   # Further increased gap between bars
-    bargroupgap=0.25,  # Increased gap between bar groups
-    uniformtext=dict(mode="hide", minsize=10),  # Ensure text is readable
-    legend=dict(
-        orientation="v",  # Vertical legend
-        yanchor="bottom",
-        y=0.02,  # Position at bottom
-        xanchor="right",
-        x=0.98,  # Position at right
-        bgcolor="rgba(50,50,50,0.9)",  # Dark gray background
-        bordercolor="gray",
-        borderwidth=1,
-        itemsizing="constant",
-        font=dict(color="white")  # White text for better readability
-    ),
-    margin=dict(l=50, r=50, t=80, b=50),  # Add more margin for better spacing
-    plot_bgcolor='rgba(30,30,30,0.3)',  # Slightly lighter than black for plot background
-    paper_bgcolor='rgba(30,30,30,0.3)',  # Slightly lighter than black for paper background
-    font=dict(color='white'),  # White text for all labels
-)
-
-# Add a border around the entire chart
-fig.update_layout(
-    shapes=[
-        # Add existing shapes
-        dict(type="line", x0=0, x1=0,
-             y0=grouped["Strike"].min() - 5, y1=grouped["Strike"].max() + 5,
-             line=dict(color="lightgray", width=2)),
-        dict(type="line",
-             x0=grouped["put_gamma_expo"].min(),
-             x1=grouped["call_gamma_expo"].max(),
-             y0=spot_price,
-             y1=spot_price,
-             line=dict(color="green", width=2, dash="dot")),
-        # Add border around the chart
-        dict(
-            type="rect",
-            xref="paper", yref="paper",
-            x0=0, y0=0, x1=1, y1=1,
-            line=dict(color="#999999", width=2),
-            fillcolor="rgba(0,0,0,0)",
-        )
-    ]
+    yaxis=dict(autorange=True, showgrid=True, gridcolor="lightgray"),
+    xaxis=dict(showgrid=True, gridcolor="lightgray"),
+    height=800
 )
 
 st.plotly_chart(fig, use_container_width=True)
