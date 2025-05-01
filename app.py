@@ -137,7 +137,9 @@ def format_number(num):
         return f"{num:.0f}"
 
 fig = go.Figure()
-for i, dte in enumerate(sorted_dtes):
+# Sort DTEs from smallest to largest for legend ordering
+sorted_dtes_asc = sorted(sorted_dtes)
+for i, dte in enumerate(sorted_dtes_asc):
     color = colors[i % len(colors)]
     sub = grouped[grouped["DTE"] == dte]
     
@@ -245,15 +247,14 @@ fig.update_layout(
     yaxis=dict(
         autorange=True, 
         showgrid=True, 
-        gridcolor="lightgray",
+        gridcolor="#666666",  # Darker gray for horizontal grid lines
         tickmode="array",
         tickvals=y_ticks,
         dtick=5,  # Grid lines every 5 points
         fixedrange=False,  # Allow zooming on y-axis
     ),
     xaxis=dict(
-        showgrid=True, 
-        gridcolor="lightgray",
+        showgrid=False,  # Remove vertical grid marks
         fixedrange=False,  # Allow zooming on x-axis
     ),
     height=1200,  # Further increased height for better spacing
@@ -261,11 +262,15 @@ fig.update_layout(
     bargroupgap=0.25,  # Increased gap between bar groups
     uniformtext=dict(mode="hide", minsize=10),  # Ensure text is readable
     legend=dict(
-        orientation="h",
+        orientation="v",  # Vertical legend
         yanchor="bottom",
-        y=1.02,
-        xanchor="center",
-        x=0.5
+        y=0.02,  # Position at bottom
+        xanchor="right",
+        x=0.98,  # Position at right
+        bgcolor="rgba(255,255,255,0.7)",  # Semi-transparent background
+        bordercolor="gray",
+        borderwidth=1,
+        itemsizing="constant"
     ),
     margin=dict(l=50, r=50, t=80, b=50)  # Add more margin for better spacing
 )
