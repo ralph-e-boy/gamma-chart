@@ -119,34 +119,52 @@ bar_mode_val = "stack" if bar_mode == "Stacked" else "group"
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
 
-# Use an expanded palette of dark pastel colors with hue variation
+# Use a carefully curated set of 20 distinct dark pastel colors
 def get_dte_color(dte, max_dte):
-    # Extended color palette with 30 colors, focusing on hue variation
-    # Dark pastel colors that work well in dark mode
+    # A set of 20 distinct dark pastel colors with good contrast in dark mode
     colors = [
-        # Reds/Pinks
-        "#d62728", "#c94277", "#aa4499", 
-        # Purples
-        "#9467bd", "#7a4e96", "#614b8f",
-        # Blues
-        "#1f77b4", "#4c72b0", "#5e8fb0", "#7095c1",
-        # Teals/Cyans
-        "#17becf", "#2a9d8f", "#56c2a3",
-        # Greens
-        "#2ca02c", "#5c8944", "#7d9d5c",
+        # Reds
+        "#d64550",  # Dark coral
+        "#a83e51",  # Burgundy
+        
+        # Oranges
+        "#e07a5f",  # Terra cotta
+        "#b86a3d",  # Burnt sienna
+        
         # Yellows/Golds
-        "#bcbd22", "#a39a23", "#8a7c24",
-        # Oranges/Browns
-        "#ff7f0e", "#d67d1c", "#ad652b", "#8c564b",
-        # Grays
-        "#7f7f7f", "#6b6b6b", "#575757",
-        # Additional hues
-        "#c27fb1", "#8f8b66", "#6d8770", "#7580b3", "#b67d85"
+        "#d4a74c",  # Golden amber
+        "#b39c4d",  # Dark gold
+        
+        # Greens
+        "#5b8c5a",  # Forest green
+        "#3a7563",  # Dark sage
+        "#7cb07c",  # Medium green
+        
+        # Teals/Cyans
+        "#4d9e9a",  # Dark teal
+        "#3d7b99",  # Steel blue
+        
+        # Blues
+        "#5e82a8",  # Slate blue
+        "#4267ac",  # Royal blue
+        "#6a5acd",  # Slate blue
+        
+        # Purples
+        "#8a508f",  # Medium purple
+        "#6c4675",  # Dark orchid
+        
+        # Pinks
+        "#c45c89",  # Dark raspberry
+        "#9c6279",  # Mauve
+        
+        # Browns/Neutrals
+        "#8b6d5c",  # Taupe
+        "#6d6875"   # Dark lavender gray
     ]
     
     # Special case for 0 DTE
     if dte == 0:
-        return "#d62728"  # Red from the palette
+        return "#d64550"  # Dark coral red for 0 DTE
     
     # For other DTEs, assign colors in order from the palette
     color_index = min(dte - 1, len(colors) - 1)
