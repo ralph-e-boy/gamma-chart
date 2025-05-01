@@ -119,52 +119,21 @@ bar_mode_val = "stack" if bar_mode == "Stacked" else "group"
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
 
-# Use a carefully curated set of 20 distinct dark pastel colors
+# Use the specified color palette
 def get_dte_color(dte, max_dte):
-    # A set of 20 distinct dark pastel colors with good contrast in dark mode
+    # Specified color palette with additional colors
     colors = [
-        # Reds
-        "#d64550",  # Dark coral
-        "#a83e51",  # Burgundy
-        
-        # Oranges
-        "#e07a5f",  # Terra cotta
-        "#b86a3d",  # Burnt sienna
-        
-        # Yellows/Golds
-        "#d4a74c",  # Golden amber
-        "#b39c4d",  # Dark gold
-        
-        # Greens
-        "#5b8c5a",  # Forest green
-        "#3a7563",  # Dark sage
-        "#7cb07c",  # Medium green
-        
-        # Teals/Cyans
-        "#4d9e9a",  # Dark teal
-        "#3d7b99",  # Steel blue
-        
-        # Blues
-        "#5e82a8",  # Slate blue
-        "#4267ac",  # Royal blue
-        "#6a5acd",  # Slate blue
-        
-        # Purples
-        "#8a508f",  # Medium purple
-        "#6c4675",  # Dark orchid
-        
-        # Pinks
-        "#c45c89",  # Dark raspberry
-        "#9c6279",  # Mauve
-        
-        # Browns/Neutrals
-        "#8b6d5c",  # Taupe
-        "#6d6875"   # Dark lavender gray
+        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
+        "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
+        "#bcbd22", "#17becf", "#04879C", "#0C3C78", "#F6C90E",
+        # Extended with variations to reach 20 colors
+        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
+        "#9467bd", "#8c564b", "#e377c2"
     ]
     
     # Special case for 0 DTE
     if dte == 0:
-        return "#d64550"  # Dark coral red for 0 DTE
+        return "#d62728"  # Red from the palette
     
     # For other DTEs, assign colors in order from the palette
     color_index = min(dte - 1, len(colors) - 1)
