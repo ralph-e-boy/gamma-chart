@@ -69,11 +69,17 @@ df = df[df["DTE"] >= 0]
 # Use known column positions
 call_gamma = pd.to_numeric(df.iloc[:, 9], errors="coerce")
 call_oi = pd.to_numeric(df.iloc[:, 10], errors="coerce")
+call_volume = pd.to_numeric(df.iloc[:, 11], errors="coerce")
 put_gamma = pd.to_numeric(df.iloc[:, 20], errors="coerce")
 put_oi = pd.to_numeric(df.iloc[:, 21], errors="coerce")
+put_volume = pd.to_numeric(df.iloc[:, 22], errors="coerce")
 
 df["call_gamma_expo"] = call_gamma * call_oi * 100
 df["put_gamma_expo"] = put_gamma * put_oi * 100 * -1
+df["call_oi"] = call_oi
+df["put_oi"] = put_oi
+df["call_volume"] = call_volume
+df["put_volume"] = put_volume
 
 # --- Filters ---
 max_dte = int(df["DTE"].max())
@@ -87,7 +93,11 @@ df = df[(df["Strike"] >= lo) & (df["Strike"] <= hi)]
 
 grouped = df.groupby(["DTE", "Strike"]).agg({
     "call_gamma_expo": "sum",
-    "put_gamma_expo": "sum"
+    "put_gamma_expo": "sum",
+    "call_oi": "sum",
+    "put_oi": "sum",
+    "call_volume": "sum",
+    "put_volume": "sum"
 }).reset_index()
 
 if grouped.empty:
@@ -111,10 +121,45 @@ colors = [
     "#bcbd22", "#17becf"
 ]
 
+# Create custom hover template
+def format_number(num):
+    if abs(num) >= 1e9:
+        return f"{num/1e9:.3f}B"
+    elif abs(num) >= 1e6:
+        return f"{num/1e6:.3f}M"
+    elif abs(num) >= 1e3:
+        return f"{num/1e3:.0f}K"
+    else:
+        return f"{num:.0f}"
+
 fig = go.Figure()
 for i, dte in enumerate(sorted_dtes):
     color = colors[i % len(colors)]
     sub = grouped[grouped["DTE"] == dte]
+    
+    # Calculate net gamma exposure for hover text
+    sub["net_gamma"] = sub["call_gamma_expo"] + sub["put_gamma_expo"]
+    
+    # Create hover template for puts
+    put_hovertemplate = (
+        "Strike: %{y:,.2f}<br>" +
+        "• Net Gamma Exposure: %{customdata[0]}<br>" +
+        "Call Open Interest: %{customdata[1]}<br>" +
+        "Put Open Interest: %{customdata[2]}<br>" +
+        "Call Volume: %{customdata[3]}<br>" +
+        "Put Volume: %{customdata[4]}<br>" +
+        "<extra></extra>"
+    )
+    
+    # Create custom data for hover template
+    customdata = list(zip(
+        [format_number(val) for val in sub["net_gamma"]],
+        [format_number(val) for val in sub["call_oi"]],
+        [format_number(val) for val in sub["put_oi"]],
+        [format_number(val) for val in sub["call_volume"]],
+        [format_number(val) for val in sub["put_volume"]]
+    ))
+    
     fig.add_trace(go.Bar(
         x=sub["put_gamma_expo"],
         y=sub["Strike"],
@@ -123,8 +168,11 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=True,
-        width=0.7
+        width=0.7,
+        hovertemplate=put_hovertemplate,
+        customdata=customdata
     ))
+    
     fig.add_trace(go.Bar(
         x=sub["call_gamma_expo"],
         y=sub["Strike"],
@@ -133,7 +181,9 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=False,
-        width=0.7
+        width=0.7,
+        hovertemplate=put_hovertemplate,
+        customdata=customdata
     ))
 
 fig.add_shape(type="line", x0=0, x1=0,
