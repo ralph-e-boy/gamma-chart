@@ -204,14 +204,22 @@ for i, dte in enumerate(sorted_dtes):
 
 fig.add_shape(type="line", x0=0, x1=0,
               y0=grouped["Strike"].min() - 5, y1=grouped["Strike"].max() + 5,
-              line=dict(color="black", width=2))
+              line=dict(color="rgba(255, 218, 3, 0.)", width=3))
+
+fig.add_shape(
+    type="line",
+    x0=0, x1=1,               # full width of chart (0 = left, 1 = right)
+    y0=spot_price, y1=spot_price,
+    xref="paper", yref="y",   # x in "paper" (0–1), y in data coordinates
+    line=dict(color="green", width=3, dash="dot")
+)
 
 fig.add_shape(type="line",
               x0=grouped["put_gamma_expo"].min(),
               x1=grouped["call_gamma_expo"].max(),
               y0=spot_price,
               y1=spot_price,
-              line=dict(color="blue", width=2, dash="dot"))
+              line=dict(color="green", width=3, dash="dot"))
 
 fig.add_annotation(
     x=grouped["put_gamma_expo"].min(),
@@ -220,16 +228,16 @@ fig.add_annotation(
     showarrow=False,
     xanchor="left",
     yshift=10,
-    font=dict(color="blue", size=14),
-    bgcolor="rgba(255,255,255,0.7)"
+    font=dict(color="lightgreen", size=14),
+    bgcolor="rgba(0.1,0.1,0.2, 0.0)"
 )
 
 fig.update_layout(
     barmode=bar_mode_val,
     xaxis_title="Gamma Exposure",
     yaxis_title="Strike Price",
-    yaxis=dict(autorange=True, showgrid=True, gridcolor="darkgray", titlefont=dict(size=16), tickfont=dict(size=14)),
-    xaxis=dict(showgrid=True, gridcolor="darkgray", titlefont=dict(size=16), tickfont=dict(size=14)),
+    yaxis=dict(autorange=True, showgrid=True, gridcolor="rgba(0.3,0.3,0.3.1.0)", tickfont=dict(size=16) ),
+    xaxis=dict(showgrid=True, gridcolor="rgba(0.1,0.1,0.1.1.0)", tickfont=dict(size=14)),
     height=800
 )
 
