@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 
 st.set_page_config(layout="wide")
-st.title("Gamma Exposure Chart")
+st.header("Gamma Exposure Chart")
 
 # File upload moved to sidebar
 try:
@@ -108,7 +108,7 @@ bar_mode = st.sidebar.radio("Bar Mode", ["Stacked", "Grouped (side-by-side)"], i
 bar_mode_val = "stack" if bar_mode == "Stacked" else "relative"
 
 # File uploader in sidebar
-uploaded_file = st.sidebar.file_uploader("Upload your CSV file", type=["csv"])
+uploaded_file = st.sidebar.file_uploader("Upload a CSV file of options chain data from https://www.cboe.com/delayed_quotes/spy/quote_table", type=["csv"])
 if uploaded_file:
     lines = uploaded_file.read().decode("utf-8").splitlines()
 
