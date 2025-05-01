@@ -188,7 +188,7 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=True,
-        width=1.4,  # Doubled the width from 0.7 to 1.4
+        width=0.9,  # Adjusted width to prevent overlap
         hovertemplate=put_hovertemplate,
         customdata=customdata
     ))
@@ -201,7 +201,7 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=False,
-        width=1.4,  # Doubled the width from 0.7 to 1.4
+        width=0.9,  # Adjusted width to prevent overlap
         hovertemplate=put_hovertemplate,
         customdata=customdata
     ))
