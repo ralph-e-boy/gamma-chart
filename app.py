@@ -119,11 +119,35 @@ bar_mode_val = "stack" if bar_mode == "Stacked" else "group"
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
 
-colors = [
-    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
-    "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
-    "#bcbd22", "#17becf"
-]
+# Colors that reflect days to expiration - from red (0 DTE) to blue (max DTE)
+def get_dte_color(dte, max_dte):
+    # For 0 DTE, use red
+    if dte == 0:
+        return "#FF3030"  # Bright red
+    
+    # For other DTEs, create a gradient from orange to blue
+    ratio = min(dte / max(max_dte, 1), 1.0)  # Normalize to 0-1
+    
+    # Define color stops (red → orange → yellow → green → blue)
+    colors = [
+        (1.0, 0.3, 0.3),  # Red
+        (1.0, 0.6, 0.0),  # Orange
+        (1.0, 0.8, 0.0),  # Yellow
+        (0.0, 0.8, 0.3),  # Green
+        (0.0, 0.5, 1.0)   # Blue
+    ]
+    
+    # Find the two colors to interpolate between
+    idx = min(int(ratio * (len(colors) - 1) * 4), len(colors) - 2)
+    t = (ratio * (len(colors) - 1) * 4) - idx
+    
+    # Linear interpolation between the two colors
+    r = colors[idx][0] * (1 - t) + colors[idx + 1][0] * t
+    g = colors[idx][1] * (1 - t) + colors[idx + 1][1] * t
+    b = colors[idx][2] * (1 - t) + colors[idx + 1][2] * t
+    
+    # Convert to hex
+    return f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
 
 # Create custom hover template
 def format_number(num):
@@ -139,8 +163,9 @@ def format_number(num):
 fig = go.Figure()
 # Sort DTEs from smallest to largest for legend ordering
 sorted_dtes_asc = sorted(sorted_dtes)
+max_dte_value = max(sorted_dtes_asc) if sorted_dtes_asc else 1
 for i, dte in enumerate(sorted_dtes_asc):
-    color = colors[i % len(colors)]
+    color = get_dte_color(dte, max_dte_value)
     sub = grouped[grouped["DTE"] == dte]
     
     # Calculate net gamma exposure for hover text
@@ -267,10 +292,11 @@ fig.update_layout(
         y=0.02,  # Position at bottom
         xanchor="right",
         x=0.98,  # Position at right
-        bgcolor="rgba(255,255,255,0.7)",  # Semi-transparent background
+        bgcolor="rgba(50,50,50,0.9)",  # Dark gray background
         bordercolor="gray",
         borderwidth=1,
-        itemsizing="constant"
+        itemsizing="constant",
+        font=dict(color="white")  # White text for better readability
     ),
     margin=dict(l=50, r=50, t=80, b=50)  # Add more margin for better spacing
 )
