@@ -153,8 +153,8 @@ for i, dte in enumerate(sorted_dtes):
     )
     
     # Create custom data for hover template
-    # Format the expiration date for each row
-    expiration_dates = [sub.iloc[i]["Expiration Date"].strftime("%Y-%m-%d") for i in range(len(sub))]
+    # Format the expiration date for each row using column index 1 for expiration date
+    expiration_dates = [df[df["DTE"] == dte].iloc[0, 1].strftime("%Y-%m-%d") for _ in range(len(sub))]
     
     customdata = list(zip(
         expiration_dates,
