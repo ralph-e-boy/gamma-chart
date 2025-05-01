@@ -188,7 +188,7 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=True,
-        width=0.7,
+        width=1.4,  # Doubled the width from 0.7 to 1.4
         hovertemplate=put_hovertemplate,
         customdata=customdata
     ))
@@ -201,7 +201,7 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=False,
-        width=0.7,
+        width=1.4,  # Doubled the width from 0.7 to 1.4
         hovertemplate=put_hovertemplate,
         customdata=customdata
     ))
@@ -228,11 +228,25 @@ fig.add_annotation(
     bgcolor="rgba(255,255,255,0.7)"
 )
 
+# Calculate y-axis tick values (every 5 points)
+min_strike = grouped["Strike"].min()
+max_strike = grouped["Strike"].max()
+y_tick_start = 5 * (min_strike // 5)  # Round down to nearest 5
+y_tick_end = 5 * (max_strike // 5 + 1)  # Round up to nearest 5
+y_ticks = list(range(int(y_tick_start), int(y_tick_end) + 5, 5))
+
 fig.update_layout(
     barmode=bar_mode_val,
     xaxis_title="Gamma Exposure",
     yaxis_title="Strike Price",
-    yaxis=dict(autorange=True, showgrid=True, gridcolor="lightgray"),
+    yaxis=dict(
+        autorange=True, 
+        showgrid=True, 
+        gridcolor="lightgray",
+        tickmode="array",
+        tickvals=y_ticks,
+        dtick=5,  # Grid lines every 5 points
+    ),
     xaxis=dict(showgrid=True, gridcolor="lightgray"),
     height=800
 )
