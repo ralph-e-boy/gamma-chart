@@ -146,8 +146,11 @@ def get_dte_color(dte, max_dte):
     g = colors[idx][1] * (1 - t) + colors[idx + 1][1] * t
     b = colors[idx][2] * (1 - t) + colors[idx + 1][2] * t
     
-    # Convert to hex
-    return f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+    # Convert to hex - ensure proper formatting with exactly 2 hex digits per color
+    r_hex = max(0, min(255, int(r*255)))
+    g_hex = max(0, min(255, int(g*255)))
+    b_hex = max(0, min(255, int(b*255)))
+    return f"#{r_hex:02x}{g_hex:02x}{b_hex:02x}"
 
 # Create custom hover template
 def format_number(num):
