@@ -228,8 +228,8 @@ fig.update_layout(
     barmode=bar_mode_val,
     xaxis_title="Gamma Exposure",
     yaxis_title="Strike Price",
-    yaxis=dict(autorange=True, showgrid=True, gridcolor="lightgray"),
-    xaxis=dict(showgrid=True, gridcolor="lightgray"),
+    yaxis=dict(autorange=True, showgrid=True, gridcolor="darkgray", titlefont=dict(size=16), tickfont=dict(size=14)),
+    xaxis=dict(showgrid=True, gridcolor="darkgray", titlefont=dict(size=16), tickfont=dict(size=14)),
     height=800
 )
 
