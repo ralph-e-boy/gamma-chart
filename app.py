@@ -143,16 +143,21 @@ for i, dte in enumerate(sorted_dtes):
     # Create hover template for puts
     put_hovertemplate = (
         "Strike: %{y:,.2f}<br>" +
-        "• Net Gamma Exposure: %{customdata[0]}<br>" +
-        "Call Open Interest: %{customdata[1]}<br>" +
-        "Put Open Interest: %{customdata[2]}<br>" +
-        "Call Volume: %{customdata[3]}<br>" +
-        "Put Volume: %{customdata[4]}<br>" +
+        "Expiration: %{customdata[0]}<br>" +
+        "• Net Gamma Exposure: %{customdata[1]}<br>" +
+        "Call Open Interest: %{customdata[2]}<br>" +
+        "Put Open Interest: %{customdata[3]}<br>" +
+        "Call Volume: %{customdata[4]}<br>" +
+        "Put Volume: %{customdata[5]}<br>" +
         "<extra></extra>"
     )
     
     # Create custom data for hover template
+    # Format the expiration date for each row
+    expiration_dates = [sub.iloc[i]["Expiration Date"].strftime("%Y-%m-%d") for i in range(len(sub))]
+    
     customdata = list(zip(
+        expiration_dates,
         [format_number(val) for val in sub["net_gamma"]],
         [format_number(val) for val in sub["call_oi"]],
         [format_number(val) for val in sub["put_oi"]],
