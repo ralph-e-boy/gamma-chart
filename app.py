@@ -119,32 +119,32 @@ bar_mode_val = "stack" if bar_mode == "Stacked" else "group"
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
 
-# Pastel colors for DTE values, following color wheel order
+# Darker colors for DTE values, following color wheel order for better contrast in dark mode
 def get_dte_color(dte, max_dte):
-    # Pastel color palette in color wheel order
-    pastel_colors = [
-        "#FFB3BA",  # Pastel Red
-        "#FFDFBA",  # Pastel Orange
-        "#FFFFBA",  # Pastel Yellow
-        "#BAFFC9",  # Pastel Green
-        "#BAE1FF",  # Pastel Blue
-        "#E2BAFF",  # Pastel Purple
-        "#F2BAF1",  # Pastel Pink
-        "#C4C4C4",  # Light Gray (for additional DTEs)
-        "#A0CED9",  # Pastel Teal
-        "#FFC09F",  # Pastel Peach
-        "#ADF7B6",  # Pastel Mint
-        "#FFDCF4",  # Pastel Lavender
+    # Darker color palette in color wheel order
+    dark_colors = [
+        "#FF3333",  # Bright Red
+        "#FF9500",  # Dark Orange
+        "#FFCC00",  # Gold Yellow
+        "#33CC33",  # Bright Green
+        "#3399FF",  # Bright Blue
+        "#9933FF",  # Bright Purple
+        "#FF33CC",  # Bright Pink
+        "#777777",  # Dark Gray (for additional DTEs)
+        "#00CCCC",  # Teal
+        "#FF6600",  # Burnt Orange
+        "#00FF99",  # Mint
+        "#CC66FF",  # Lavender
     ]
     
     # Special case for 0 DTE
     if dte == 0:
-        return "#FF9999"  # Brighter pastel red for 0 DTE
+        return "#FF0000"  # Pure red for 0 DTE
     
-    # For other DTEs, assign colors in order from the pastel palette
+    # For other DTEs, assign colors in order from the dark palette
     # This ensures each DTE gets a distinct color following the color wheel
-    color_index = min(dte - 1, len(pastel_colors) - 1)
-    return pastel_colors[color_index]
+    color_index = min(dte - 1, len(dark_colors) - 1)
+    return dark_colors[color_index]
 
 # Create custom hover template
 def format_number(num):
@@ -233,16 +233,7 @@ for i, dte in enumerate(sorted_dtes_asc):
         offset=0  # Ensure proper alignment
     ))
 
-fig.add_shape(type="line", x0=0, x1=0,
-              y0=grouped["Strike"].min() - 5, y1=grouped["Strike"].max() + 5,
-              line=dict(color="lightgray", width=2))
-
-fig.add_shape(type="line",
-              x0=grouped["put_gamma_expo"].min(),
-              x1=grouped["call_gamma_expo"].max(),
-              y0=spot_price,
-              y1=spot_price,
-              line=dict(color="green", width=2, dash="dot"))
+# Note: These shapes are now added in the update_layout shapes list
 
 fig.add_annotation(
     x=grouped["put_gamma_expo"].min(),
@@ -295,7 +286,34 @@ fig.update_layout(
         itemsizing="constant",
         font=dict(color="white")  # White text for better readability
     ),
-    margin=dict(l=50, r=50, t=80, b=50)  # Add more margin for better spacing
+    margin=dict(l=50, r=50, t=80, b=50),  # Add more margin for better spacing
+    plot_bgcolor='rgba(30,30,30,0.3)',  # Slightly lighter than black for plot background
+    paper_bgcolor='rgba(30,30,30,0.3)',  # Slightly lighter than black for paper background
+    font=dict(color='white'),  # White text for all labels
+)
+
+# Add a border around the entire chart
+fig.update_layout(
+    shapes=[
+        # Add existing shapes
+        dict(type="line", x0=0, x1=0,
+             y0=grouped["Strike"].min() - 5, y1=grouped["Strike"].max() + 5,
+             line=dict(color="lightgray", width=2)),
+        dict(type="line",
+             x0=grouped["put_gamma_expo"].min(),
+             x1=grouped["call_gamma_expo"].max(),
+             y0=spot_price,
+             y1=spot_price,
+             line=dict(color="green", width=2, dash="dot")),
+        # Add border around the chart
+        dict(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=0, y0=0, x1=1, y1=1,
+            line=dict(color="#999999", width=2),
+            fillcolor="rgba(0,0,0,0)",
+        )
+    ]
 )
 
 st.plotly_chart(fig, use_container_width=True)
