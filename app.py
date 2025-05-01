@@ -189,7 +189,7 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=True,
-        width=0.9,  # Adjusted width to prevent overlap
+        width=0.7,  # Reduced width to prevent overlap
         hovertemplate=put_hovertemplate,
         customdata=customdata
     ))
@@ -202,7 +202,7 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=False,
-        width=0.9,  # Adjusted width to prevent overlap
+        width=0.7,  # Reduced width to prevent overlap
         hovertemplate=put_hovertemplate,
         customdata=customdata
     ))
@@ -249,8 +249,9 @@ fig.update_layout(
         dtick=5,  # Grid lines every 5 points
     ),
     xaxis=dict(showgrid=True, gridcolor="lightgray"),
-    height=800,
-    bargap=0.15  # Add some gap between bars
+    height=1000,  # Increased height for better spacing
+    bargap=0.3,   # Increased gap between bars
+    bargroupgap=0.2  # Added gap between bar groups
 )
 
 st.plotly_chart(fig, use_container_width=True)
