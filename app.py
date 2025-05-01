@@ -119,13 +119,29 @@ bar_mode_val = "stack" if bar_mode == "Stacked" else "group"
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
 
-# Use the specified color palette
+# Use an expanded palette of dark pastel colors with hue variation
 def get_dte_color(dte, max_dte):
-    # Specified color palette
+    # Extended color palette with 30 colors, focusing on hue variation
+    # Dark pastel colors that work well in dark mode
     colors = [
-        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
-        "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
-        "#bcbd22", "#17becf"
+        # Reds/Pinks
+        "#d62728", "#c94277", "#aa4499", 
+        # Purples
+        "#9467bd", "#7a4e96", "#614b8f",
+        # Blues
+        "#1f77b4", "#4c72b0", "#5e8fb0", "#7095c1",
+        # Teals/Cyans
+        "#17becf", "#2a9d8f", "#56c2a3",
+        # Greens
+        "#2ca02c", "#5c8944", "#7d9d5c",
+        # Yellows/Golds
+        "#bcbd22", "#a39a23", "#8a7c24",
+        # Oranges/Browns
+        "#ff7f0e", "#d67d1c", "#ad652b", "#8c564b",
+        # Grays
+        "#7f7f7f", "#6b6b6b", "#575757",
+        # Additional hues
+        "#c27fb1", "#8f8b66", "#6d8770", "#7580b3", "#b67d85"
     ]
     
     # Special case for 0 DTE
