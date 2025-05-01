@@ -142,6 +142,7 @@ for i, dte in enumerate(sorted_dtes):
     sub = grouped[grouped["DTE"] == dte]
     
     # Calculate net gamma exposure for hover text
+    sub = sub.copy()  # Create a copy to avoid the SettingWithCopyWarning
     sub["net_gamma"] = sub["call_gamma_expo"] + sub["put_gamma_expo"]
     
     # Create hover template for puts
