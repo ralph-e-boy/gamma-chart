@@ -4,17 +4,24 @@ import pandas as pd
 import plotly.graph_objects as go
 import re
 from datetime import datetime
+from io import StringIO
 
 st.set_page_config(layout="wide")
 
-# File upload moved to sidebar
+# File upload in sidebar
 st.sidebar.subheader("Gamma Exposure Chart")
-try:
-    with open("quotedata.csv", "r") as f:
-        lines = f.read().splitlines()
-except FileNotFoundError:
-    st.error("'quotedata.csv' not found and no file uploaded.")
-    st.stop()
+uploaded_file = st.sidebar.file_uploader("Upload a CSV file of options chain data from https://www.cboe.com/delayed_quotes/spy/quote_table", type=["csv"])
+
+# Get data from uploaded file or default file
+if uploaded_file:
+    lines = uploaded_file.read().decode("utf-8").splitlines()
+else:
+    try:
+        with open("quotedata.csv", "r") as f:
+            lines = f.read().splitlines()
+    except FileNotFoundError:
+        st.error("'quotedata.csv' not found and no file uploaded.")
+        st.stop()
 
 # Check structure
 if len(lines) < 4:
@@ -107,10 +114,7 @@ if grouped.empty:
 bar_mode = st.sidebar.radio("Bar Mode", ["Stacked", "Grouped (side-by-side)"], index=0)
 bar_mode_val = "stack" if bar_mode == "Stacked" else "relative"
 
-# File uploader in sidebar
-uploaded_file = st.sidebar.file_uploader("Upload a CSV file of options chain data from https://www.cboe.com/delayed_quotes/spy/quote_table", type=["csv"])
-if uploaded_file:
-    lines = uploaded_file.read().decode("utf-8").splitlines()
+# File uploader has been moved to the top of the script
 
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
