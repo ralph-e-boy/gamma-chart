@@ -204,7 +204,7 @@ for i, dte in enumerate(sorted_dtes):
 
 fig.add_shape(type="line", x0=0, x1=0,
               y0=grouped["Strike"].min() - 5, y1=grouped["Strike"].max() + 5,
-              line=dict(color="rgba(255, 218, 3, 0.)", width=3))
+              line=dict(color="rgba(255, 218, 3, 0.6)", width=3))
 
 fig.add_shape(
     type="line",
