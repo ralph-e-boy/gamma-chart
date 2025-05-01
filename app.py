@@ -119,27 +119,27 @@ bar_mode_val = "stack" if bar_mode == "Stacked" else "group"
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
 
-# Darker colors for DTE values, following color wheel order for better contrast in dark mode
+# Darker, more subdued colors for DTE values, following color wheel order for better contrast in dark mode
 def get_dte_color(dte, max_dte):
-    # Darker color palette in color wheel order
+    # Darker, more subdued color palette in color wheel order
     dark_colors = [
-        "#FF3333",  # Bright Red
-        "#FF9500",  # Dark Orange
-        "#FFCC00",  # Gold Yellow
-        "#33CC33",  # Bright Green
-        "#3399FF",  # Bright Blue
-        "#9933FF",  # Bright Purple
-        "#FF33CC",  # Bright Pink
-        "#777777",  # Dark Gray (for additional DTEs)
-        "#00CCCC",  # Teal
-        "#FF6600",  # Burnt Orange
-        "#00FF99",  # Mint
-        "#CC66FF",  # Lavender
+        "#CC2222",  # Dark Red
+        "#996633",  # Brown (instead of bright orange)
+        "#CCAA00",  # Dark Gold
+        "#227722",  # Dark Green
+        "#2255AA",  # Dark Blue
+        "#662288",  # Dark Purple
+        "#AA2277",  # Dark Pink
+        "#555555",  # Darker Gray (for additional DTEs)
+        "#006666",  # Dark Teal
+        "#884400",  # Dark Brown
+        "#007744",  # Dark Mint
+        "#663388",  # Dark Lavender
     ]
     
     # Special case for 0 DTE
     if dte == 0:
-        return "#FF0000"  # Pure red for 0 DTE
+        return "#990000"  # Dark red for 0 DTE
     
     # For other DTEs, assign colors in order from the dark palette
     # This ensures each DTE gets a distinct color following the color wheel
