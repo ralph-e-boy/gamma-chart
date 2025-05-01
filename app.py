@@ -119,38 +119,32 @@ bar_mode_val = "stack" if bar_mode == "Stacked" else "group"
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
 
-# Colors that reflect days to expiration - from red (0 DTE) to blue (max DTE)
+# Pastel colors for DTE values, following color wheel order
 def get_dte_color(dte, max_dte):
-    # For 0 DTE, use red
-    if dte == 0:
-        return "#FF3030"  # Bright red
-    
-    # For other DTEs, create a gradient from orange to blue
-    ratio = min(dte / max(max_dte, 1), 1.0)  # Normalize to 0-1
-    
-    # Define color stops (red → orange → yellow → green → blue)
-    colors = [
-        (1.0, 0.3, 0.3),  # Red
-        (1.0, 0.6, 0.0),  # Orange
-        (1.0, 0.8, 0.0),  # Yellow
-        (0.0, 0.8, 0.3),  # Green
-        (0.0, 0.5, 1.0)   # Blue
+    # Pastel color palette in color wheel order
+    pastel_colors = [
+        "#FFB3BA",  # Pastel Red
+        "#FFDFBA",  # Pastel Orange
+        "#FFFFBA",  # Pastel Yellow
+        "#BAFFC9",  # Pastel Green
+        "#BAE1FF",  # Pastel Blue
+        "#E2BAFF",  # Pastel Purple
+        "#F2BAF1",  # Pastel Pink
+        "#C4C4C4",  # Light Gray (for additional DTEs)
+        "#A0CED9",  # Pastel Teal
+        "#FFC09F",  # Pastel Peach
+        "#ADF7B6",  # Pastel Mint
+        "#FFDCF4",  # Pastel Lavender
     ]
     
-    # Find the two colors to interpolate between
-    idx = min(int(ratio * (len(colors) - 1) * 4), len(colors) - 2)
-    t = (ratio * (len(colors) - 1) * 4) - idx
+    # Special case for 0 DTE
+    if dte == 0:
+        return "#FF9999"  # Brighter pastel red for 0 DTE
     
-    # Linear interpolation between the two colors
-    r = colors[idx][0] * (1 - t) + colors[idx + 1][0] * t
-    g = colors[idx][1] * (1 - t) + colors[idx + 1][1] * t
-    b = colors[idx][2] * (1 - t) + colors[idx + 1][2] * t
-    
-    # Convert to hex - ensure proper formatting with exactly 2 hex digits per color
-    r_hex = max(0, min(255, int(r*255)))
-    g_hex = max(0, min(255, int(g*255)))
-    b_hex = max(0, min(255, int(b*255)))
-    return f"#{r_hex:02x}{g_hex:02x}{b_hex:02x}"
+    # For other DTEs, assign colors in order from the pastel palette
+    # This ensures each DTE gets a distinct color following the color wheel
+    color_index = min(dte - 1, len(pastel_colors) - 1)
+    return pastel_colors[color_index]
 
 # Create custom hover template
 def format_number(num):
