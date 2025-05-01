@@ -1,9 +1,11 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import numpy as np
+from scipy.stats import norm
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
+from io import StringIO
 
 st.set_page_config(layout="wide")
 
@@ -52,7 +54,6 @@ if name_match and quote_match:
     summary_rendered = True
 
 # --- DataFrame ---
-from io import StringIO
 data_str = "\n".join(lines[3:])
 df = pd.read_csv(StringIO(data_str))
 
@@ -81,6 +82,100 @@ df["put_oi"] = put_oi
 df["call_volume"] = call_volume
 df["put_volume"] = put_volume
 
+# Now let's use some functions similar to those in gex.py to calculate the gamma profile
+# Black-Scholes European-Options Gamma
+def calc_gamma_ex(S, K, vol, T, r, q, opt_type, OI):
+    """Calculate gamma exposure for a specific option"""
+    if T <= 0 or vol <= 0:
+        return 0
+
+    dp = (np.log(S/K) + (r - q + 0.5*vol**2)*T) / (vol*np.sqrt(T))
+    dm = dp - vol*np.sqrt(T) 
+
+    if opt_type == 'call':
+        gamma = np.exp(-q*T) * norm.pdf(dp) / (S * vol * np.sqrt(T))
+        return OI * 100 * S * S * 0.01 * gamma 
+    else:  # Gamma is same for calls and puts
+        gamma = K * np.exp(-r*T) * norm.pdf(dm) / (S * S * vol * np.sqrt(T))
+        return OI * 100 * S * S * 0.01 * gamma
+
+def is_third_friday(d):
+    """Check if date is the third Friday of the month"""
+    return d.weekday() == 4 and 15 <= d.day <= 21
+
+def get_gamma_profile(df, spot_price, strike_range, r=0, q=0):
+    """Calculate gamma profile across a range of price levels"""
+    from_strike = spot_price * strike_range[0]/100
+    to_strike = spot_price * strike_range[1]/100
+    levels = np.linspace(from_strike, to_strike, 60)
+    
+    today_date = datetime.now().date()
+    
+    # Calculate DTE in years for Black-Scholes
+    df['daysTillExp'] = [(x - today).days/365 for x in df["Expiration Date"]]
+    # For 0DTE options, setting minimum DTE to avoid division by zero
+    df['daysTillExp'] = df['daysTillExp'].apply(lambda x: max(x, 1/262))
+    
+    # Handle potential NaN values
+    df['daysTillExp'] = df['daysTillExp'].fillna(1/262)
+    
+    next_expiry = df['Expiration Date'].min()
+    
+    df['IsThirdFriday'] = [is_third_friday(x) for x in df["Expiration Date"]]
+    third_fridays = df.loc[df['IsThirdFriday'] == True]
+    
+    if len(third_fridays) > 0:
+        next_monthly_exp = third_fridays['Expiration Date'].min()
+    else:
+        next_monthly_exp = next_expiry
+    
+    total_gamma = []
+    total_gamma_ex_next = []
+    total_gamma_ex_fri = []
+    
+    # For each spot level, calculate gamma exposure
+    for level in levels:
+        # Use estimates for volatility if not available in data
+        # Use average IV of 30% if not available
+        avg_vol = 0.30
+        
+        df['callGammaEx'] = df.apply(lambda row: calc_gamma_ex(
+            level, row['Strike'], avg_vol, 
+            row['daysTillExp'], r, q, "call", row['call_oi']), axis=1)
+            
+        df['putGammaEx'] = df.apply(lambda row: calc_gamma_ex(
+            level, row['Strike'], avg_vol, 
+            row['daysTillExp'], r, q, "put", row['put_oi']), axis=1)
+            
+        total_gamma.append(df['callGammaEx'].sum() - df['putGammaEx'].sum())
+        
+        ex_next = df.loc[df['Expiration Date'] != next_expiry]
+        total_gamma_ex_next.append(ex_next['callGammaEx'].sum() - ex_next['putGammaEx'].sum())
+        
+        ex_fri = df.loc[df['Expiration Date'] != next_monthly_exp]
+        total_gamma_ex_fri.append(ex_fri['callGammaEx'].sum() - ex_fri['putGammaEx'].sum())
+    
+    # Convert to billions
+    total_gamma = np.array(total_gamma) / 10**9
+    total_gamma_ex_next = np.array(total_gamma_ex_next) / 10**9
+    total_gamma_ex_fri = np.array(total_gamma_ex_fri) / 10**9
+    
+    # Find Gamma Flip Point (where gamma crosses zero)
+    zero_cross_idx = np.where(np.diff(np.sign(total_gamma)))[0]
+    
+    if len(zero_cross_idx) > 0:
+        neg_gamma = total_gamma[zero_cross_idx]
+        pos_gamma = total_gamma[zero_cross_idx+1]
+        neg_strike = levels[zero_cross_idx]
+        pos_strike = levels[zero_cross_idx+1]
+        
+        zero_gamma = pos_strike - ((pos_strike - neg_strike) * pos_gamma/(pos_gamma-neg_gamma))
+        zero_gamma = zero_gamma[0]
+    else:
+        zero_gamma = None
+    
+    return levels, total_gamma, total_gamma_ex_next, total_gamma_ex_fri, zero_gamma
+
 # --- Filters ---
 max_dte = int(df["DTE"].max())
 days_ahead = st.sidebar.slider("Max DTE (days)", 0, max_dte, min(7, max_dte))
@@ -90,6 +185,10 @@ spot_price = last if summary_rendered else df["Strike"].median()
 strike_range = st.sidebar.slider("Strike range (± around spot)", 0, 200, 50)
 lo, hi = spot_price - strike_range / 2, spot_price + strike_range / 2
 df = df[(df["Strike"] >= lo) & (df["Strike"] <= hi)]
+
+# Sidebar for risk-free rate and dividend yield
+risk_free_rate = st.sidebar.number_input("Risk-Free Rate (%)", value=0.0, min_value=0.0, max_value=10.0, step=0.25) / 100
+dividend_yield = st.sidebar.number_input("Dividend Yield (%)", value=0.0, min_value=0.0, max_value=10.0, step=0.25) / 100
 
 grouped = df.groupby(["DTE", "Strike"]).agg({
     "call_gamma_expo": "sum",
@@ -132,7 +231,62 @@ def format_number(num):
     else:
         return f"{num:.0f}"
 
+# Create the figure
 fig = go.Figure()
+
+# Calculate gamma profile from gex.py
+try:
+    # We need to ensure our strike range is expressed as percentages from spot
+    percent_range = (lo/spot_price*100, hi/spot_price*100)
+    
+    # Make sure we're passing valid data
+    if len(df) > 0:
+        levels, total_gamma, total_gamma_ex_next, total_gamma_ex_fri, zero_gamma = get_gamma_profile(
+            df, spot_price, percent_range, risk_free_rate, dividend_yield)
+    else:
+        # If no data, create dummy values to avoid errors
+        levels = np.linspace(lo, hi, 60)
+        total_gamma = np.zeros_like(levels)
+        total_gamma_ex_next = np.zeros_like(levels)
+        total_gamma_ex_fri = np.zeros_like(levels)
+        zero_gamma = None
+        st.warning("Insufficient data for gamma profile calculation.")
+except Exception as e:
+    st.error(f"Error calculating gamma profile: {str(e)}")
+    # Create dummy values to avoid errors
+    levels = np.linspace(lo, hi, 60)
+    total_gamma = np.zeros_like(levels)
+    total_gamma_ex_next = np.zeros_like(levels)
+    total_gamma_ex_fri = np.zeros_like(levels)
+    zero_gamma = None
+
+# Add background color areas based on gamma flip point
+if zero_gamma is not None:
+    # Add green background for area above gamma flip
+    fig.add_shape(
+        type="rect",
+        x0=grouped["put_gamma_expo"].min() * 1.1,  # Extend slightly beyond data range
+        x1=grouped["call_gamma_expo"].max() * 1.1,
+        y0=zero_gamma,
+        y1=hi + (hi-lo)*0.05,  # Extend slightly beyond data range
+        fillcolor="rgba(0, 255, 0, 0.05)",  # Light green with transparency
+        line=dict(width=0),
+        layer="below"
+    )
+    
+    # Add red background for area below gamma flip
+    fig.add_shape(
+        type="rect",
+        x0=grouped["put_gamma_expo"].min() * 1.1,
+        x1=grouped["call_gamma_expo"].max() * 1.1,
+        y0=lo - (hi-lo)*0.05,
+        y1=zero_gamma,
+        fillcolor="rgba(255, 0, 0, 0.05)",  # Light red with transparency
+        line=dict(width=0),
+        layer="below"
+    )
+
+# Add the bar charts from app.py (adjusted to appear behind line charts)
 for i, dte in enumerate(sorted_dtes):
     color = colors[i % len(colors)]
     sub = grouped[grouped["DTE"] == dte]
@@ -202,10 +356,49 @@ for i, dte in enumerate(sorted_dtes):
         customdata=customdata
     ))
 
+# Add gamma profile as line charts (now added after bars to appear on top)
+fig.add_trace(go.Scatter(
+    y=levels,
+    x=total_gamma,  # Note: x and y are swapped from gex.py since we're using horizontal orientation
+    mode='lines',
+    name='Gamma Profile (All Expiries)',
+    line=dict(color='blue', width=3),
+    yaxis='y',
+    xaxis='x2',
+    legendgroup='Gamma Profile',
+    hovertemplate="Price: %{y:,.2f}<br>Gamma: %{x:,.3f}B<extra></extra>"
+))
+
+fig.add_trace(go.Scatter(
+    y=levels,
+    x=total_gamma_ex_next,
+    mode='lines',
+    name='Ex-Next Expiry',
+    line=dict(color='orange', width=2, dash='dash'),
+    yaxis='y',
+    xaxis='x2',
+    legendgroup='Gamma Profile',
+    hovertemplate="Price: %{y:,.2f}<br>Gamma: %{x:,.3f}B<extra></extra>"
+))
+
+fig.add_trace(go.Scatter(
+    y=levels,
+    x=total_gamma_ex_fri,
+    mode='lines',
+    name='Ex-Next Monthly',
+    line=dict(color='purple', width=2, dash='dot'),
+    yaxis='y',
+    xaxis='x2',
+    legendgroup='Gamma Profile',
+    hovertemplate="Price: %{y:,.2f}<br>Gamma: %{x:,.3f}B<extra></extra>"
+))
+
+# Add vertical line at x=0
 fig.add_shape(type="line", x0=0, x1=0,
               y0=grouped["Strike"].min() - 5, y1=grouped["Strike"].max() + 5,
               line=dict(color="rgba(255, 218, 3, 0.6)", width=3))
 
+# Add horizontal line at current spot price
 fig.add_shape(
     type="line",
     x0=0, x1=1,               # full width of chart (0 = left, 1 = right)
@@ -221,6 +414,7 @@ fig.add_shape(type="line",
               y1=spot_price,
               line=dict(color="green", width=3, dash="dot"))
 
+# Add spot price annotation
 fig.add_annotation(
     x=grouped["put_gamma_expo"].min(),
     y=spot_price,
@@ -232,15 +426,77 @@ fig.add_annotation(
     bgcolor="rgba(0.1,0.1,0.2, 0.0)"
 )
 
+# Add gamma flip point annotation if it exists
+if zero_gamma is not None:
+    fig.add_shape(
+        type="line",
+        x0=0, x1=1,               
+        y0=zero_gamma, y1=zero_gamma,
+        xref="paper", yref="y",   
+        line=dict(color="red", width=2, dash="dot")
+    )
+    
+    fig.add_annotation(
+        x=grouped["put_gamma_expo"].min(),
+        y=zero_gamma,
+        text="Gamma Flip Point",
+        showarrow=False,
+        xanchor="left",
+        yshift=-20,
+        font=dict(color="red", size=14),
+        bgcolor="rgba(0.1,0.1,0.2, 0.0)"
+    )
+    
+    # Display gamma flip info
+    flip_diff = ((zero_gamma / spot_price) - 1) * 100
+    st.sidebar.markdown(f"**Gamma Flip Point**: {zero_gamma:.2f} ({flip_diff:.2f}% from spot)")
+    
+    if zero_gamma > spot_price:
+        st.sidebar.info(f"Market is in negative gamma territory below {zero_gamma:.2f}. This typically leads to increased volatility when the market moves downward.")
+    else:
+        st.sidebar.info(f"Market is in positive gamma territory above {zero_gamma:.2f}. This typically leads to increased volatility when the market moves upward.")
+
+# Update layout with a secondary x-axis for the gamma profile
 fig.update_layout(
     barmode=bar_mode_val,
     xaxis_title="Gamma Exposure",
     yaxis_title="Strike Price",
-    yaxis=dict(autorange=True, showgrid=True, gridcolor="rgba(0.3,0.3,0.3.1.0)", tickfont=dict(size=16) ),
+    yaxis=dict(autorange=True, showgrid=True, gridcolor="rgba(0.3,0.3,0.3.1.0)", tickfont=dict(size=16)),
     xaxis=dict(showgrid=True, gridcolor="rgba(0.1,0.1,0.1.1.0)", tickfont=dict(size=14)),
-    height=800
+    xaxis2=dict(
+        title="Gamma Profile (billions $ / 1% move)",
+        overlaying="x",
+        side="top",
+        showgrid=False,
+        zeroline=True,
+        zerolinewidth=2,
+        zerolinecolor="rgba(255, 218, 3, 0.6)",
+    ),
+    height=800,
+    legend=dict(
+        orientation="h",
+        yanchor="top",
+        y=0.02,  # Move to bottom
+        xanchor="right",
+        x=0.98,  # Stay on right side
+        bgcolor="rgba(255, 255, 255, 0.5)"  # Semi-transparent background
+    )
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
+# Add gamma profile explanation
+st.markdown("""
+### Chart Explanation
+- **Bar chart**: Shows gamma exposure at each strike price, with puts (negative gamma) on the left and calls (positive gamma) on the right.
+- **Line charts**: Show the gamma profile (gamma exposure across different price levels):
+  - **Blue line**: All expiries
+  - **Orange line**: Excluding the next expiry
+  - **Purple line**: Excluding the next monthly expiry
+- **Green dotted line**: Current spot price
+- **Red dotted line**: Gamma flip point (where dealer gamma exposure changes from negative to positive)
+- **Light green area**: Positive gamma region (typically less volatile when market moves in this direction)
+- **Light red area**: Negative gamma region (typically more volatile when market moves in this direction)
+""")
 
 st.markdown('''\n\n> Tip: Enable dark mode in your Streamlit settings for best visual contrast.''')
