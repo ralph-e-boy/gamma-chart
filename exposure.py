@@ -46,7 +46,9 @@ monthDay = todayDate[0].split(' ')
 
 # Handling of US/EU date formats
 if len(monthDay) == 2:
-    year = int(todayDate[1])
+    # Extract just the year part before any additional text
+    year_str = todayDate[1].strip().split(' ')[0]
+    year = int(year_str)
     month = monthDay[0]
     day = int(monthDay[1])
 else:
