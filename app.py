@@ -158,7 +158,7 @@ for i, dte in enumerate(sorted_dtes):
     try:
         exp_date_row = df[df["DTE"] == dte].iloc[0]
         if isinstance(exp_date_row["Expiration Date"], pd.Timestamp):
-            expiration_date = exp_date_row["Expiration Date"].strftime("%Y-%m-%d")
+            expiration_date = exp_date_row["Expiration Date"].strftime("%B %d, %Y")
         else:
             expiration_date = str(exp_date_row["Expiration Date"])
     except (IndexError, KeyError):
