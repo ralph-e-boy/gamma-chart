@@ -499,4 +499,184 @@ st.markdown("""
 - **Light red area**: Negative gamma region (typically more volatile when market moves in this direction)
 """)
 
-st.markdown('''\n\n> Tip: Enable dark mode in your Streamlit settings for best visual contrast.''')
+# Market Analysis Section
+st.markdown("""
+## Strategic Options Analysis
+
+### Market Analysis Based on Gamma Exposure
+
+Based on the gamma exposure data displayed in the chart above, we can identify potential strategic positions for both long calls and short puts. This analysis considers current dealer positioning, gamma flip points, and options concentration areas.
+""")
+
+try:
+    # Calculate net gamma at each strike
+    strike_gamma = grouped.groupby("Strike").agg({
+        "call_gamma_expo": "sum",
+        "put_gamma_expo": "sum",
+        "call_oi": "sum",
+        "put_oi": "sum"
+    }).reset_index()
+    
+    strike_gamma["net_gamma"] = strike_gamma["call_gamma_expo"] + strike_gamma["put_gamma_expo"]
+    strike_gamma["call_put_ratio"] = strike_gamma["call_oi"] / strike_gamma["put_oi"].replace(0, 1)  # Avoid div by zero
+    
+    # Find strikes with highest positive and negative gamma
+    high_pos_gamma = strike_gamma.nlargest(3, "net_gamma")
+    high_neg_gamma = strike_gamma.nsmallest(3, "net_gamma")
+    
+    # Find strikes with high call/put imbalance
+    high_call_strikes = strike_gamma.nlargest(3, "call_put_ratio")
+    high_put_strikes = strike_gamma.nsmallest(3, "call_put_ratio")
+    
+    # Simple strategy recommendations based on gamma profile
+    st.markdown("### Long Call Opportunities")
+    
+    long_call_targets = []
+    
+    # Above gamma flip, look for high positive gamma as potential support levels
+    if zero_gamma is not None:
+        above_flip = strike_gamma[strike_gamma["Strike"] > zero_gamma]
+        if not above_flip.empty:
+            resistance_levels = above_flip.nlargest(2, "net_gamma")
+            for _, row in resistance_levels.iterrows():
+                long_call_targets.append({
+                    "strike": row["Strike"],
+                    "rationale": f"High positive gamma at {row['Strike']:.2f} indicates potential dealer hedging support",
+                    "net_gamma": row["net_gamma"]
+                })
+    
+    # Below current price but above zero gamma is often a good target for long calls
+    if zero_gamma is not None and zero_gamma < spot_price:
+        target_zone = strike_gamma[(strike_gamma["Strike"] < spot_price) & 
+                                 (strike_gamma["Strike"] > zero_gamma)]
+        if not target_zone.empty:
+            for _, row in target_zone.nlargest(1, "net_gamma").iterrows():
+                long_call_targets.append({
+                    "strike": row["Strike"], 
+                    "rationale": f"Between zero gamma ({zero_gamma:.2f}) and spot price ({spot_price:.2f})",
+                    "net_gamma": row["net_gamma"]
+                })
+    
+    # Look at call/put imbalance for potential interest
+    for _, row in high_call_strikes.iterrows():
+        if row["call_put_ratio"] > 1.5:  # Significant call bias
+            long_call_targets.append({
+                "strike": row["Strike"],
+                "rationale": f"High call/put ratio ({row['call_put_ratio']:.2f}) suggests bullish sentiment",
+                "net_gamma": row["net_gamma"]
+            })
+    
+    # Display long call targets
+    if long_call_targets:
+        # Sort by strike price for cleaner display
+        long_call_targets = sorted(long_call_targets, key=lambda x: x["strike"])
+        for i, target in enumerate(long_call_targets[:3], 1):  # Limit to top 3
+            gamma_color = "green" if target["net_gamma"] > 0 else "red"
+            st.markdown(f"""
+            **Target {i}: Strike {target['strike']:.2f}**
+            - *Rationale*: {target['rationale']}
+            - *Net Gamma*: <span style='color:{gamma_color}'>{format_number(target['net_gamma'])}</span>
+            """, unsafe_allow_html=True)
+    else:
+        st.markdown("No clear long call opportunities identified in the current gamma profile.")
+    
+    # Short Put Opportunities
+    st.markdown("### Short Put Opportunities")
+    
+    short_put_targets = []
+    
+    # Below gamma flip but above major support levels
+    if zero_gamma is not None:
+        below_flip = strike_gamma[strike_gamma["Strike"] < zero_gamma]
+        if not below_flip.empty:
+            support_levels = below_flip.nlargest(2, "net_gamma")
+            for _, row in support_levels.iterrows():
+                distance_from_spot = (spot_price - row["Strike"]) / spot_price * 100
+                if distance_from_spot > 0 and distance_from_spot < 15:  # Within reasonable range of spot
+                    short_put_targets.append({
+                        "strike": row["Strike"],
+                        "rationale": f"Support level {distance_from_spot:.1f}% below spot price with positive gamma",
+                        "net_gamma": row["net_gamma"]
+                    })
+    
+    # Areas with high put OI but not excessive negative gamma might be good for selling puts
+    high_put_oi_reasonable_gamma = strike_gamma[
+        (strike_gamma["put_oi"] > strike_gamma["put_oi"].median() * 1.5) & 
+        (strike_gamma["net_gamma"] > strike_gamma["net_gamma"].min() * 0.5)
+    ]
+    
+    for _, row in high_put_oi_reasonable_gamma.nlargest(2, "put_oi").iterrows():
+        distance_from_spot = (spot_price - row["Strike"]) / spot_price * 100
+        if distance_from_spot > 0:  # Only below current price
+            short_put_targets.append({
+                "strike": row["Strike"],
+                "rationale": f"High put OI with manageable gamma exposure, {distance_from_spot:.1f}% below spot",
+                "net_gamma": row["net_gamma"],
+                "put_oi": row["put_oi"]
+            })
+    
+    # Display short put targets
+    if short_put_targets:
+        # Sort by strike price for cleaner display
+        short_put_targets = sorted(short_put_targets, key=lambda x: x["strike"], reverse=True)
+        for i, target in enumerate(short_put_targets[:3], 1):  # Limit to top 3
+            gamma_color = "green" if target["net_gamma"] > 0 else "red"
+            st.markdown(f"""
+            **Target {i}: Strike {target['strike']:.2f}**
+            - *Rationale*: {target['rationale']}
+            - *Net Gamma*: <span style='color:{gamma_color}'>{format_number(target['net_gamma'])}</span>
+            """, unsafe_allow_html=True)
+    else:
+        st.markdown("No clear short put opportunities identified in the current gamma profile.")
+    
+    # Market Structure Analysis
+    st.markdown("### Overall Market Structure Analysis")
+    
+    # Determine overall gamma environment
+    overall_gamma = strike_gamma["net_gamma"].sum()
+    gamma_color = "green" if overall_gamma > 0 else "red"
+    
+    st.markdown(f"""
+    **Net Market Gamma: <span style='color:{gamma_color}'>{format_number(overall_gamma)}</span>**
+    
+    The market is currently in a **{'positive' if overall_gamma > 0 else 'negative'}** gamma environment.
+    """, unsafe_allow_html=True)
+    
+    # Analysis based on gamma flip point
+    if zero_gamma is not None:
+        flip_diff = ((zero_gamma / spot_price) - 1) * 100
+        flip_direction = "above" if zero_gamma > spot_price else "below"
+        
+        st.markdown(f"""
+        **Gamma Flip Point Analysis:**
+        - Current flip point is at {zero_gamma:.2f}, which is {abs(flip_diff):.2f}% {flip_direction} the spot price
+        - {'Market is in negative gamma territory below the flip point' if zero_gamma > spot_price else 'Market is in positive gamma territory above the flip point'}
+        - {'This structure typically creates higher volatility on downward moves' if zero_gamma > spot_price else 'This structure typically creates higher volatility on upward moves'}
+        """)
+        
+        # Trading strategy suggestion based on flip point
+        if zero_gamma > spot_price:
+            st.markdown("""
+            **Strategy Implication:** Consider options strategies that benefit from increased downside volatility, 
+            such as long puts or put spreads, while being cautious with short put positions.
+            """)
+        else:
+            st.markdown("""
+            **Strategy Implication:** Consider options strategies that benefit from increased upside volatility,
+            such as long calls or call spreads, while being cautious with short call positions near the upper resistance levels.
+            """)
+    
+    # Warning about options trading
+    st.warning("""
+    **Disclaimer:** This analysis is based on current dealer positioning and gamma exposure profiles, which can change
+    rapidly. Options strategies involve substantial risk and are not suitable for all investors. This information should
+    not be considered as financial advice. Always conduct your own research and consider consulting with a financial
+    professional before placing trades.
+    """)
+    
+except Exception as e:
+    st.error(f"Error generating market analysis: {str(e)}")
+
+st.markdown('''
+
+> Tip: Enable dark mode in your Streamlit settings for best visual contrast.''')
