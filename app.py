@@ -119,31 +119,22 @@ bar_mode_val = "stack" if bar_mode == "Stacked" else "group"
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
 
-# Modern, cool color palette for dark mode
+# Use the specified color palette
 def get_dte_color(dte, max_dte):
-    # Modern color palette inspired by popular dark mode designs
-    modern_colors = [
-        "#FF5252",  # Coral Red
-        "#7986CB",  # Indigo
-        "#4DB6AC",  # Teal
-        "#FFB74D",  # Amber
-        "#9575CD",  # Deep Purple
-        "#4FC3F7",  # Light Blue
-        "#81C784",  # Light Green
-        "#FF8A65",  # Deep Orange
-        "#64B5F6",  # Blue
-        "#A1887F",  # Brown
-        "#E57373",  # Light Red
-        "#BA68C8",  # Purple
+    # Specified color palette
+    colors = [
+        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
+        "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
+        "#bcbd22", "#17becf"
     ]
     
     # Special case for 0 DTE
     if dte == 0:
-        return "#F44336"  # Material Design Red
+        return "#d62728"  # Red from the palette
     
-    # For other DTEs, assign colors in order from the modern palette
-    color_index = min(dte - 1, len(modern_colors) - 1)
-    return modern_colors[color_index]
+    # For other DTEs, assign colors in order from the palette
+    color_index = min(dte - 1, len(colors) - 1)
+    return colors[color_index]
 
 # Create custom hover template
 def format_number(num):
