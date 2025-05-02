@@ -479,7 +479,7 @@ fig.update_layout(
         y=0.05,  # Position from bottom of chart
         xanchor="right", 
         x=0.98,  # Right side
-        bgcolor="rgba(200, 200, 200, 0.6)",  # Works in both light/dark modes
+        bgcolor="rgba(200, 200, 200, 0.12)",  # Works in both light/dark modes
         bordercolor="rgba(100, 100, 100, 0.8)",
         borderwidth=1,
         itemsizing="constant",  # Keep item sizes consistent
