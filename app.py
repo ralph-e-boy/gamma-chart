@@ -491,27 +491,18 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # Add gamma profile explanation
-st.markdown("""
-### Chart Explanation
-- **Bar chart**: Shows gamma exposure at each strike price, with puts (negative gamma) on the left and calls (positive gamma) on the right.
-- **Line charts**: Show the gamma profile (gamma exposure across different price levels):
-  - **Blue line**: All expiries
-  - **Orange line**: Excluding the next expiry
-  - **Purple line**: Excluding the next monthly expiry
-- **Green dotted line**: Current spot price
-- **Red dotted line**: Gamma flip point (where dealer gamma exposure changes from negative to positive)
-- **Light green area**: Positive gamma region (typically less volatile when market moves in this direction)
-- **Light red area**: Negative gamma region (typically more volatile when market moves in this direction)
-""")
-
-# Market Analysis Section
-st.markdown("""
-## Strategic Options Analysis
-
-### Market Analysis Based on Gamma Exposure
-
-Based on the gamma exposure data displayed in the chart above, we can identify potential strategic positions for both long calls and short puts. This analysis considers current dealer positioning, gamma flip points, and options concentration areas.
-""")
+# st.markdown("""
+# ### Chart Explanation
+# - **Bar chart**: Shows gamma exposure at each strike price, with puts (negative gamma) on the left and calls (positive gamma) on the right.
+# - **Line charts**: Show the gamma profile (gamma exposure across different price levels):
+#   - **Blue line**: All expiries
+#   - **Orange line**: Excluding the next expiry
+#   - **Purple line**: Excluding the next monthly expiry
+# - **Green dotted line**: Current spot price
+# - **Red dotted line**: Gamma flip point (where dealer gamma exposure changes from negative to positive)
+# - **Light green area**: Positive gamma region (typically less volatile when market moves in this direction)
+# - **Light red area**: Negative gamma region (typically more volatile when market moves in this direction)
+# """)
 
 try:
     # Calculate net gamma at each strike
@@ -534,7 +525,7 @@ try:
     high_put_strikes = strike_gamma.nsmallest(3, "call_put_ratio")
     
     # Simple strategy recommendations based on gamma profile
-    st.markdown("### Long Call Opportunities")
+    st.markdown("#### Call Strategy Recommendation")
     
     long_call_targets = []
     
@@ -585,8 +576,8 @@ try:
     else:
         st.markdown("No clear long call opportunities identified in the current gamma profile.")
     
-    # Short Put Opportunities
-    st.markdown("### Short Put Opportunities")
+    # Put Opportunities
+    st.markdown("#### Put Strategy Recommendation")
     
     short_put_targets = []
     
@@ -671,17 +662,6 @@ try:
             such as long calls or call spreads, while being cautious with short call positions near the upper resistance levels.
             """)
     
-    # Warning about options trading
-    st.warning("""
-    **Disclaimer:** This analysis is based on current dealer positioning and gamma exposure profiles, which can change
-    rapidly. Options strategies involve substantial risk and are not suitable for all investors. This information should
-    not be considered as financial advice. Always conduct your own research and consider consulting with a financial
-    professional before placing trades.
-    """)
-    
 except Exception as e:
     st.error(f"Error generating market analysis: {str(e)}")
 
-st.markdown('''
-
-> Tip: Enable dark mode in your Streamlit settings for best visual contrast.''')
