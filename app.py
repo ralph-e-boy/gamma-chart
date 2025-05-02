@@ -474,12 +474,17 @@ fig.update_layout(
     ),
     height=800,
     legend=dict(
-        orientation="h",
-        yanchor="top",
-        y=0.02,  # Move to bottom
-        xanchor="right",
-        x=0.98,  # Stay on right side
-        bgcolor="rgba(255, 255, 255, 0.5)"  # Semi-transparent background
+        orientation="v",  # Vertical layout - one row per entry
+        yanchor="bottom",
+        y=0.05,  # Position from bottom of chart
+        xanchor="right", 
+        x=0.98,  # Right side
+        bgcolor="rgba(200, 200, 200, 0.6)",  # Works in both light/dark modes
+        bordercolor="rgba(100, 100, 100, 0.8)",
+        borderwidth=1,
+        itemsizing="constant",  # Keep item sizes consistent
+        font=dict(size=12),
+        tracegroupgap=5  # Add a small gap between legend groups
     )
 )
 
