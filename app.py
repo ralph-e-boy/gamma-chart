@@ -207,9 +207,9 @@ bar_mode = st.sidebar.radio("Bar Mode", ["Stacked", "Grouped (side-by-side)"], i
 bar_mode_val = "stack" if bar_mode == "Stacked" else "relative"
 
 # File uploader in sidebar
-uploaded_file = st.sidebar.file_uploader("Upload a CSV file of options chain data from https://www.cboe.com/delayed_quotes/spy/quote_table", type=["csv"])
-if uploaded_file:
-    lines = uploaded_file.read().decode("utf-8").splitlines()
+# uploaded_file = st.sidebar.file_uploader("Upload a CSV file of options chain data from https://www.cboe.com/delayed_quotes/spy/quote_table", type=["csv"])
+# if uploaded_file:
+#    lines = uploaded_file.read().decode("utf-8").splitlines()
 
 grouped["abs_total"] = grouped["call_gamma_expo"].abs() + grouped["put_gamma_expo"].abs()
 sorted_dtes = grouped.groupby("DTE")["abs_total"].sum().sort_values(ascending=False).index.tolist()
