@@ -137,7 +137,7 @@ def get_gamma_profile(df, spot_price, strike_range, r=0, q=0):
     for level in levels:
         # Use estimates for volatility if not available in data
         # Use average IV of 30% if not available
-        avg_vol = 0.30
+        avg_vol = 0.1935
         
         df['callGammaEx'] = df.apply(lambda row: calc_gamma_ex(
             level, row['Strike'], avg_vol, 
@@ -472,7 +472,7 @@ fig.update_layout(
         zerolinewidth=2,
         zerolinecolor="rgba(255, 218, 3, 0.6)",
     ),
-    height=800,
+    height=1000,
     legend=dict(
         orientation="v",  # Vertical layout - one row per entry
         yanchor="bottom",
