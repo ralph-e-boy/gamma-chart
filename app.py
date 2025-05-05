@@ -135,9 +135,8 @@ def get_gamma_profile(df, spot_price, strike_range, r=0, q=0):
     
     # For each spot level, calculate gamma exposure
     for level in levels:
-        # Use estimates for volatility if not available in data
-        # Use average IV of 30% if not available
-        avg_vol = 0.1935
+        # Use user-provided volatility estimate
+        avg_vol = avg_volatility
         
         df['callGammaEx'] = df.apply(lambda row: calc_gamma_ex(
             level, row['Strike'], avg_vol, 
@@ -186,9 +185,10 @@ strike_range = st.sidebar.slider("Strike range (± around spot)", 0, 200, 50)
 lo, hi = spot_price - strike_range / 2, spot_price + strike_range / 2
 df = df[(df["Strike"] >= lo) & (df["Strike"] <= hi)]
 
-# Sidebar for risk-free rate and dividend yield
+# Sidebar for risk-free rate, dividend yield, and volatility
 risk_free_rate = st.sidebar.number_input("Risk-Free Rate (%)", value=0.0, min_value=0.0, max_value=10.0, step=0.25) / 100
 dividend_yield = st.sidebar.number_input("Dividend Yield (%)", value=0.0, min_value=0.0, max_value=10.0, step=0.25) / 100
+avg_volatility = st.sidebar.number_input("Average Volatility", value=0.20, min_value=0.01, max_value=2.0, step=0.01)
 
 grouped = df.groupby(["DTE", "Strike"]).agg({
     "call_gamma_expo": "sum",
