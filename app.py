@@ -112,12 +112,12 @@ def get_gamma_profile(df, spot_price, strike_range, r=0, q=0):
     today_date = datetime.now().date()
     
     # Calculate DTE in years for Black-Scholes
-    df['daysTillExp'] = [(x - today).days/365 for x in df["Expiration Date"]]
+    df.loc[:, 'daysTillExp'] = [(x - today).days/365 for x in df["Expiration Date"]]
     # For 0DTE options, setting minimum DTE to avoid division by zero
-    df['daysTillExp'] = df['daysTillExp'].apply(lambda x: max(x, 1/262))
+    df.loc[:, 'daysTillExp'] = df['daysTillExp'].apply(lambda x: max(x, 1/262))
     
     # Handle potential NaN values
-    df['daysTillExp'] = df['daysTillExp'].fillna(1/262)
+    df.loc[:, 'daysTillExp'] = df['daysTillExp'].fillna(1/262)
     
     next_expiry = df['Expiration Date'].min()
     
@@ -138,11 +138,11 @@ def get_gamma_profile(df, spot_price, strike_range, r=0, q=0):
         # Use user-provided volatility estimate
         avg_vol = avg_volatility
         
-        df['callGammaEx'] = df.apply(lambda row: calc_gamma_ex(
+        df.loc[:, 'callGammaEx'] = df.apply(lambda row: calc_gamma_ex(
             level, row['Strike'], avg_vol, 
             row['daysTillExp'], r, q, "call", row['call_oi']), axis=1)
             
-        df['putGammaEx'] = df.apply(lambda row: calc_gamma_ex(
+        df.loc[:, 'putGammaEx'] = df.apply(lambda row: calc_gamma_ex(
             level, row['Strike'], avg_vol, 
             row['daysTillExp'], r, q, "put", row['put_oi']), axis=1)
             
