@@ -186,7 +186,7 @@ lo, hi = spot_price - strike_range / 2, spot_price + strike_range / 2
 df = df[(df["Strike"] >= lo) & (df["Strike"] <= hi)]
 
 # Sidebar for risk-free rate, dividend yield, and volatility
-risk_free_rate = st.sidebar.number_input("Risk-Free Rate (%)", value=0.0, min_value=0.0, max_value=10.0, step=0.25) / 100
+risk_free_rate = st.sidebar.number_input("Risk-Free Rate (%)", value=4.25, min_value=0.0, max_value=10.0, step=0.25) / 100
 dividend_yield = st.sidebar.number_input("Dividend Yield (%)", value=0.0, min_value=0.0, max_value=10.0, step=0.25) / 100
 avg_volatility = st.sidebar.number_input("Average Volatility", value=0.20, min_value=0.01, max_value=2.0, step=0.01)
 
