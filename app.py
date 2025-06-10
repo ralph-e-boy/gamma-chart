@@ -1,8 +1,5 @@
 import streamlit as st
-
 import pandas as pd
-# disable SettingWithCopyWarning 
-pd.options.mode.chained_assignment = None
 import plotly.graph_objects as go
 import numpy as np
 from scipy.stats import norm
@@ -399,7 +396,7 @@ fig.add_trace(go.Scatter(
 # Add vertical line at x=0
 fig.add_shape(type="line", x0=0, x1=0,
               y0=grouped["Strike"].min() - 5, y1=grouped["Strike"].max() + 5,
-              line=dict(color="rgba(255, 218, 3, 0.6)", width=2))
+              line=dict(color="rgba(255, 218, 3, 0.6)", width=3))
 
 # Add horizontal line at current spot price
 fig.add_shape(
@@ -470,9 +467,9 @@ fig.update_layout(
         title="Gamma Profile (billions $ / 1% move)",
         overlaying="x",
         side="top",
-        showgrid=True,
-        zeroline=False,
-        zerolinewidth=29,
+        showgrid=False,
+        zeroline=True,
+        zerolinewidth=2,
         zerolinecolor="rgba(255, 218, 3, 0.6)",
     ),
     height=1000,
