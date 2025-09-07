@@ -103,11 +103,27 @@ def is_third_friday(d):
     """Check if date is the third Friday of the month"""
     return d.weekday() == 4 and 15 <= d.day <= 21
 
-def get_gamma_profile(df, spot_price, strike_range, r=0, q=0):
+def get_gamma_profile(df, spot_price, strike_range, r=0, q=0, strike_levels=None):
     """Calculate gamma profile across a range of price levels"""
     from_strike = spot_price * strike_range[0]/100
     to_strike = spot_price * strike_range[1]/100
-    levels = np.linspace(from_strike, to_strike, 60)
+    
+    # Use provided strike levels if available, otherwise use linspace
+    if strike_levels is not None:
+        # Use actual strike prices from the data, but extend range slightly for smooth curves
+        unique_strikes = np.sort(strike_levels.unique())
+        min_strike = unique_strikes.min()
+        max_strike = unique_strikes.max()
+        
+        # Create a denser grid that includes all actual strikes plus interpolated points
+        padding = (max_strike - min_strike) * 0.1
+        extended_range = np.linspace(min_strike - padding, max_strike + padding, 80)
+        
+        # Combine actual strikes with extended range and sort
+        all_levels = np.concatenate([unique_strikes, extended_range])
+        levels = np.sort(np.unique(all_levels))
+    else:
+        levels = np.linspace(from_strike, to_strike, 60)
     
     today_date = datetime.now().date()
     
@@ -186,9 +202,9 @@ lo, hi = spot_price - strike_range / 2, spot_price + strike_range / 2
 df = df[(df["Strike"] >= lo) & (df["Strike"] <= hi)]
 
 # Sidebar for risk-free rate, dividend yield, and volatility
-risk_free_rate = st.sidebar.number_input("Risk-Free Rate (%)", value=4.25, min_value=0.0, max_value=10.0, step=0.001) / 100
+risk_free_rate = st.sidebar.number_input("Risk-Free Rate (%)", value=4.267, min_value=0.0, max_value=10.0, step=0.001) / 100
 dividend_yield = st.sidebar.number_input("Dividend Yield (%)", value=0.0, min_value=0.0, max_value=10.0, step=0.25) / 100
-avg_volatility = st.sidebar.number_input("Average Volatility", value=0.20, min_value=0.01, max_value=2.0, step=0.01)
+avg_volatility = st.sidebar.number_input("Average Volatility", value=0.17, min_value=0.01, max_value=2.0, step=0.01)
 
 grouped = df.groupby(["DTE", "Strike"]).agg({
     "call_gamma_expo": "sum",
@@ -236,13 +252,19 @@ fig = go.Figure()
 
 # Calculate gamma profile from gex.py
 try:
-    # We need to ensure our strike range is expressed as percentages from spot
-    percent_range = (lo/spot_price*100, hi/spot_price*100)
-    
-    # Make sure we're passing valid data
-    if len(df) > 0:
+    # We need to ensure our strike range covers the full range of available strikes
+    # Use the actual min/max strikes from the filtered data for better alignment
+    if len(grouped) > 0:
+        actual_lo = grouped["Strike"].min()
+        actual_hi = grouped["Strike"].max()
+        # Add some padding to the range
+        strike_padding = (actual_hi - actual_lo) * 0.1
+        from_strike = max(lo, actual_lo - strike_padding)
+        to_strike = min(hi, actual_hi + strike_padding)
+        percent_range = (from_strike/spot_price*100, to_strike/spot_price*100)
+        
         levels, total_gamma, total_gamma_ex_next, total_gamma_ex_fri, zero_gamma = get_gamma_profile(
-            df, spot_price, percent_range, risk_free_rate, dividend_yield)
+            df, spot_price, percent_range, risk_free_rate, dividend_yield, grouped["Strike"])
     else:
         # If no data, create dummy values to avoid errors
         levels = np.linspace(lo, hi, 60)
@@ -262,28 +284,59 @@ except Exception as e:
 
 # Add background color areas based on gamma flip point
 if zero_gamma is not None:
-    # Add green background for area above gamma flip
+    # Calculate ranges for both axes to ensure full coverage
+    # Primary axis range (bar charts)
+    bar_x_min = grouped["put_gamma_expo"].min() * 1.2
+    bar_x_max = grouped["call_gamma_expo"].max() * 1.2
+    
+    # Secondary axis range (gamma profile lines)
+    gamma_min = min(total_gamma.min(), total_gamma_ex_next.min(), total_gamma_ex_fri.min())
+    gamma_max = max(total_gamma.max(), total_gamma_ex_next.max(), total_gamma_ex_fri.max())
+    gamma_x_min = gamma_min * 1.2
+    gamma_x_max = gamma_max * 1.2
+    
+    # Background for PRIMARY x-axis (bar chart area) - GREEN above flip
     fig.add_shape(
         type="rect",
-        x0=grouped["put_gamma_expo"].min() * 1.1,  # Extend slightly beyond data range
-        x1=grouped["call_gamma_expo"].max() * 1.1,
-        y0=zero_gamma,
-        y1=hi + (hi-lo)*0.05,  # Extend slightly beyond data range
-        fillcolor="rgba(0, 255, 0, 0.05)",  # Light green with transparency
+        x0=bar_x_min, x1=bar_x_max,
+        y0=zero_gamma, y1=hi + (hi-lo)*0.05,
+        fillcolor="rgba(0, 255, 0, 0.05)",
         line=dict(width=0),
-        layer="below"
+        layer="below",
+        xref="x"  # Primary x-axis
     )
     
-    # Add red background for area below gamma flip
+    # Background for PRIMARY x-axis (bar chart area) - RED below flip  
     fig.add_shape(
         type="rect",
-        x0=grouped["put_gamma_expo"].min() * 1.1,
-        x1=grouped["call_gamma_expo"].max() * 1.1,
-        y0=lo - (hi-lo)*0.05,
-        y1=zero_gamma,
-        fillcolor="rgba(255, 0, 0, 0.05)",  # Light red with transparency
+        x0=bar_x_min, x1=bar_x_max,
+        y0=lo - (hi-lo)*0.05, y1=zero_gamma,
+        fillcolor="rgba(255, 0, 0, 0.05)",
         line=dict(width=0),
-        layer="below"
+        layer="below",
+        xref="x"  # Primary x-axis
+    )
+    
+    # Background for SECONDARY x-axis (gamma profile area) - GREEN above flip
+    fig.add_shape(
+        type="rect",
+        x0=gamma_x_min, x1=gamma_x_max,
+        y0=zero_gamma, y1=hi + (hi-lo)*0.05,
+        fillcolor="rgba(0, 255, 0, 0.05)",
+        line=dict(width=0),
+        layer="below",
+        xref="x2"  # Secondary x-axis
+    )
+    
+    # Background for SECONDARY x-axis (gamma profile area) - RED below flip
+    fig.add_shape(
+        type="rect",
+        x0=gamma_x_min, x1=gamma_x_max,
+        y0=lo - (hi-lo)*0.05, y1=zero_gamma,
+        fillcolor="rgba(255, 0, 0, 0.05)",
+        line=dict(width=0),
+        layer="below",
+        xref="x2"  # Secondary x-axis
     )
 
 # Add the bar charts from app.py (adjusted to appear behind line charts)
@@ -393,10 +446,7 @@ fig.add_trace(go.Scatter(
     hovertemplate="Price: %{y:,.2f}<br>Gamma: %{x:,.3f}B<extra></extra>"
 ))
 
-# Add vertical line at x=0
-fig.add_shape(type="line", x0=0, x1=0,
-              y0=grouped["Strike"].min() - 5, y1=grouped["Strike"].max() + 5,
-              line=dict(color="rgba(255, 218, 3, 0.6)", width=3))
+# Vertical line at x=0 is handled by the secondary axis zeroline
 
 # Add horizontal line at current spot price
 fig.add_shape(
@@ -461,7 +511,12 @@ fig.update_layout(
     barmode=bar_mode_val,
     xaxis_title="Gamma Exposure",
     yaxis_title="Strike Price",
-    yaxis=dict(autorange=True, showgrid=True, gridcolor="rgba(0.3,0.3,0.3.1.0)", tickfont=dict(size=16)),
+    yaxis=dict(
+        range=[levels.min() * 0.995, levels.max() * 1.005] if len(levels) > 0 else None,
+        showgrid=True, 
+        gridcolor="rgba(0.3,0.3,0.3.1.0)", 
+        tickfont=dict(size=16)
+    ),
     xaxis=dict(showgrid=True, gridcolor="rgba(0.1,0.1,0.1.1.0)", tickfont=dict(size=14)),
     xaxis2=dict(
         title="Gamma Profile (billions $ / 1% move)",
