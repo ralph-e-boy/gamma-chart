@@ -383,7 +383,7 @@ if zero_gamma is not None:
     # Background for PRIMARY x-axis (bar chart area) - GREEN above flip
     fig.add_shape(
         type="rect",
-        x0=bar_x_min, x1=bar_x_max,
+        x0=bar_x_min * 1.1, x1=bar_x_max * 1.1,
         y0=zero_gamma, y1=hi + (hi-lo)*0.05,
         fillcolor="rgba(0, 255, 0, 0.05)",
         line=dict(width=0),
@@ -394,7 +394,7 @@ if zero_gamma is not None:
     # Background for PRIMARY x-axis (bar chart area) - RED below flip  
     fig.add_shape(
         type="rect",
-        x0=bar_x_min, x1=bar_x_max,
+        x0=bar_x_min * 1.1, x1=bar_x_max * 1.1,
         y0=lo - (hi-lo)*0.05, y1=zero_gamma,
         fillcolor="rgba(255, 0, 0, 0.05)",
         line=dict(width=0),
@@ -405,7 +405,7 @@ if zero_gamma is not None:
     # Background for SECONDARY x-axis (gamma profile area) - GREEN above flip
     fig.add_shape(
         type="rect",
-        x0=gamma_x_min, x1=gamma_x_max,
+        x0=gamma_x_min * 1.1, x1=gamma_x_max * 1.1,
         y0=zero_gamma, y1=hi + (hi-lo)*0.05,
         fillcolor="rgba(0, 255, 0, 0.05)",
         line=dict(width=0),
@@ -416,7 +416,7 @@ if zero_gamma is not None:
     # Background for SECONDARY x-axis (gamma profile area) - RED below flip
     fig.add_shape(
         type="rect",
-        x0=gamma_x_min, x1=gamma_x_max,
+        x0=gamma_x_min * 1.1, x1=gamma_x_max * 1.1,
         y0=lo - (hi-lo)*0.05, y1=zero_gamma,
         fillcolor="rgba(255, 0, 0, 0.05)",
         line=dict(width=0),
@@ -476,7 +476,7 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=True,
-        width=0.7,
+        width=0.5,
         hovertemplate=put_hovertemplate,
         customdata=customdata
     ))
@@ -489,7 +489,7 @@ for i, dte in enumerate(sorted_dtes):
         name=f"{dte} DTE",
         legendgroup=f"{dte} DTE",
         showlegend=False,
-        width=0.7,
+        width=0.5,
         hovertemplate=put_hovertemplate,
         customdata=customdata
     ))
@@ -597,13 +597,13 @@ fig.update_layout(
     xaxis_title="Gamma Exposure",
     yaxis_title="Strike Price",
     yaxis=dict(
-        range=[levels.min() * 0.995, levels.max() * 1.005] if len(levels) > 0 else None,
+        range=[grouped["Strike"].min() * 0.998, grouped["Strike"].max() * 1.002] if len(grouped) > 0 else None,
         showgrid=True,
         gridcolor="rgba(0.3,0.3,0.3.1.0)",
         tickfont=dict(size=16)
     ),
     xaxis=dict(
-        range=[bar_x_min, bar_x_max],  # Use unified primary axis range
+        range=[bar_x_min * 1.1, bar_x_max * 1.1],  # Add 10% margin on both sides
         showgrid=True,
         gridcolor="rgba(0.1,0.1,0.1.1.0)",
         tickfont=dict(size=14),
@@ -613,7 +613,7 @@ fig.update_layout(
     ),
     xaxis2=dict(
         title="Gamma Profile (billions $ / 1% move)",
-        range=[gamma_x_min, gamma_x_max],  # Use unified secondary axis range
+        range=[gamma_x_min * 1.1, gamma_x_max * 1.1],  # Add 10% margin on both sides
         overlaying="x",
         side="top",
         showgrid=False,
