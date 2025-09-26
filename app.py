@@ -67,13 +67,21 @@ today = pd.Timestamp.today().normalize()
 df["DTE"] = (df["Expiration Date"] - today).dt.days
 df = df[df["DTE"] >= 0]
 
-# Use known column positions
-call_gamma = pd.to_numeric(df.iloc[:, 9], errors="coerce")
-call_oi = pd.to_numeric(df.iloc[:, 10], errors="coerce")
-call_volume = pd.to_numeric(df.iloc[:, 11], errors="coerce")
-put_gamma = pd.to_numeric(df.iloc[:, 20], errors="coerce")
-put_oi = pd.to_numeric(df.iloc[:, 21], errors="coerce")
-put_volume = pd.to_numeric(df.iloc[:, 22], errors="coerce")
+# Define column positions (easy to change later)
+col_call_gamma = 9
+col_call_oi = 10
+col_call_volume = 6  # Volume column for calls
+col_put_gamma = 20
+col_put_oi = 21
+col_put_volume = 17  # Volume.1 column for puts
+
+# Extract data using column positions
+call_gamma = pd.to_numeric(df.iloc[:, col_call_gamma], errors="coerce")
+call_oi = pd.to_numeric(df.iloc[:, col_call_oi], errors="coerce")
+call_volume = pd.to_numeric(df.iloc[:, col_call_volume], errors="coerce")
+put_gamma = pd.to_numeric(df.iloc[:, col_put_gamma], errors="coerce")
+put_oi = pd.to_numeric(df.iloc[:, col_put_oi], errors="coerce")
+put_volume = pd.to_numeric(df.iloc[:, col_put_volume], errors="coerce")
 
 df["call_gamma_expo"] = call_gamma * call_oi * 100
 df["put_gamma_expo"] = put_gamma * put_oi * 100 * -1
@@ -194,12 +202,12 @@ def get_gamma_profile(df, spot_price, strike_range, r=0, q=0, strike_levels=None
 # --- Filters ---
 max_dte = int(df["DTE"].max())
 days_ahead = st.sidebar.slider("Max DTE (days)", 0, max_dte, min(7, max_dte))
-df = df[df["DTE"] <= days_ahead]
+df = df[df["DTE"] <= days_ahead].copy()
 
 spot_price = last if summary_rendered else df["Strike"].median()
 strike_range = st.sidebar.slider("Strike range (± around spot)", 0, 200, 50)
 lo, hi = spot_price - strike_range / 2, spot_price + strike_range / 2
-df = df[(df["Strike"] >= lo) & (df["Strike"] <= hi)]
+df = df[(df["Strike"] >= lo) & (df["Strike"] <= hi)].copy()
 
 # Sidebar for risk-free rate, dividend yield, and volatility
 risk_free_rate = st.sidebar.number_input("Risk-Free Rate (%)", value=4.267, min_value=0.0, max_value=10.0, step=0.001) / 100
@@ -419,8 +427,8 @@ if zero_gamma is not None:
 # Add the bar charts from app.py (adjusted to appear behind line charts)
 for i, dte in enumerate(sorted_dtes):
     color = colors[i % len(colors)]
-    sub = grouped[grouped["DTE"] == dte]
-    
+    sub = grouped[grouped["DTE"] == dte].copy()
+
     # Calculate net gamma exposure for hover text
     sub["net_gamma"] = sub["call_gamma_expo"] + sub["put_gamma_expo"]
     
@@ -613,7 +621,7 @@ fig.update_layout(
         zerolinewidth=2,
         zerolinecolor="rgba(255, 218, 3, 0.6)",
     ),
-    height=max(800, len(grouped) * 15 + 400),  # Dynamic height: minimum 800px, scale with data points
+    height=max(800, min(1800, len(grouped) * 8 + 600)),  # Dynamic height: 800-1800px range, gentler scaling
     legend=dict(
         orientation="v",  # Vertical layout - one row per entry
         yanchor="bottom",
