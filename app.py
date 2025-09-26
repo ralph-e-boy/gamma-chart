@@ -282,18 +282,95 @@ except Exception as e:
     total_gamma_ex_fri = np.zeros_like(levels)
     zero_gamma = None
 
+# Unified coordinate system calculation
+def calculate_unified_axis_bounds(bar_data_min, bar_data_max, gamma_data_min, gamma_data_max, padding_factor=1.2):
+    """
+    Calculate unified axis bounds that ensure zero alignment between primary and secondary axes.
+
+    Returns:
+        tuple: (primary_min, primary_max, secondary_min, secondary_max)
+    """
+    # Calculate the natural ranges for both datasets
+    bar_range = abs(bar_data_max - bar_data_min)
+    gamma_range = abs(gamma_data_max - gamma_data_min)
+
+    # Add padding to both ranges
+    bar_padded_min = bar_data_min - (bar_range * (padding_factor - 1) / 2)
+    bar_padded_max = bar_data_max + (bar_range * (padding_factor - 1) / 2)
+
+    gamma_padded_min = gamma_data_min - (gamma_range * (padding_factor - 1) / 2)
+    gamma_padded_max = gamma_data_max + (gamma_range * (padding_factor - 1) / 2)
+
+    # Ensure zero is included in both ranges
+    bar_padded_min = min(bar_padded_min, 0)
+    bar_padded_max = max(bar_padded_max, 0)
+    gamma_padded_min = min(gamma_padded_min, 0)
+    gamma_padded_max = max(gamma_padded_max, 0)
+
+    # Calculate the zero position as a fraction of each range
+    bar_total_range = bar_padded_max - bar_padded_min
+    gamma_total_range = gamma_padded_max - gamma_padded_min
+
+    bar_zero_fraction = abs(bar_padded_min) / bar_total_range if bar_total_range != 0 else 0.5
+    gamma_zero_fraction = abs(gamma_padded_min) / gamma_total_range if gamma_total_range != 0 else 0.5
+
+    # Adjust ranges so zero is at the same relative position
+    target_zero_fraction = max(bar_zero_fraction, gamma_zero_fraction)
+
+    # Recalculate ranges with aligned zero position
+    if target_zero_fraction > 0 and target_zero_fraction < 1:
+        # For bar axis
+        if bar_zero_fraction != target_zero_fraction:
+            bar_left_range = bar_total_range * target_zero_fraction
+            bar_right_range = bar_total_range * (1 - target_zero_fraction)
+            bar_unified_min = -bar_left_range
+            bar_unified_max = bar_right_range
+        else:
+            bar_unified_min = bar_padded_min
+            bar_unified_max = bar_padded_max
+
+        # For gamma axis
+        if gamma_zero_fraction != target_zero_fraction:
+            gamma_left_range = gamma_total_range * target_zero_fraction
+            gamma_right_range = gamma_total_range * (1 - target_zero_fraction)
+            gamma_unified_min = -gamma_left_range
+            gamma_unified_max = gamma_right_range
+        else:
+            gamma_unified_min = gamma_padded_min
+            gamma_unified_max = gamma_padded_max
+    else:
+        # Fallback to original ranges if calculation fails
+        bar_unified_min, bar_unified_max = bar_padded_min, bar_padded_max
+        gamma_unified_min, gamma_unified_max = gamma_padded_min, gamma_padded_max
+
+    # Make both axes symmetric around zero for perfect visual centering
+    bar_max_abs = max(abs(bar_unified_min), abs(bar_unified_max))
+    gamma_max_abs = max(abs(gamma_unified_min), abs(gamma_unified_max))
+
+    bar_unified_min = -bar_max_abs
+    bar_unified_max = bar_max_abs
+    gamma_unified_min = -gamma_max_abs
+    gamma_unified_max = gamma_max_abs
+
+    return bar_unified_min, bar_unified_max, gamma_unified_min, gamma_unified_max
+
+# Calculate unified axis bounds for proper zero alignment
+if len(grouped) > 0 and len(total_gamma) > 0:
+    bar_data_min = grouped["put_gamma_expo"].min()
+    bar_data_max = grouped["call_gamma_expo"].max()
+    gamma_data_min = min(total_gamma.min(), total_gamma_ex_next.min(), total_gamma_ex_fri.min())
+    gamma_data_max = max(total_gamma.max(), total_gamma_ex_next.max(), total_gamma_ex_fri.max())
+
+    bar_x_min, bar_x_max, gamma_x_min, gamma_x_max = calculate_unified_axis_bounds(
+        bar_data_min, bar_data_max, gamma_data_min, gamma_data_max
+    )
+else:
+    # Fallback values
+    bar_x_min, bar_x_max = -1000, 1000
+    gamma_x_min, gamma_x_max = -1, 1
+
 # Add background color areas based on gamma flip point
 if zero_gamma is not None:
-    # Calculate ranges for both axes to ensure full coverage
-    # Primary axis range (bar charts)
-    bar_x_min = grouped["put_gamma_expo"].min() * 1.2
-    bar_x_max = grouped["call_gamma_expo"].max() * 1.2
-    
-    # Secondary axis range (gamma profile lines)
-    gamma_min = min(total_gamma.min(), total_gamma_ex_next.min(), total_gamma_ex_fri.min())
-    gamma_max = max(total_gamma.max(), total_gamma_ex_next.max(), total_gamma_ex_fri.max())
-    gamma_x_min = gamma_min * 1.2
-    gamma_x_max = gamma_max * 1.2
     
     # Background for PRIMARY x-axis (bar chart area) - GREEN above flip
     fig.add_shape(
@@ -464,9 +541,9 @@ fig.add_shape(type="line",
               y1=spot_price,
               line=dict(color="green", width=3, dash="dot"))
 
-# Add spot price annotation
+# Add spot price annotation on the left side
 fig.add_annotation(
-    x=grouped["put_gamma_expo"].min(),
+    x=bar_x_min,  # Use left edge of unified axis range
     y=spot_price,
     text="Spot price",
     showarrow=False,
@@ -487,11 +564,11 @@ if zero_gamma is not None:
     )
     
     fig.add_annotation(
-        x=grouped["put_gamma_expo"].min(),
+        x=bar_x_max,  # Use right edge of unified axis range
         y=zero_gamma,
         text="Gamma Flip Point",
         showarrow=False,
-        xanchor="left",
+        xanchor="right",  # Anchor to the right side
         yshift=-20,
         font=dict(color="red", size=14),
         bgcolor="rgba(0.1,0.1,0.2, 0.0)"
@@ -506,20 +583,29 @@ if zero_gamma is not None:
     else:
         st.sidebar.info(f"Market is in positive gamma territory above {zero_gamma:.2f}. This typically leads to increased volatility when the market moves upward.")
 
-# Update layout with a secondary x-axis for the gamma profile
+# Update layout with unified axis configuration for proper zero alignment
 fig.update_layout(
     barmode=bar_mode_val,
     xaxis_title="Gamma Exposure",
     yaxis_title="Strike Price",
     yaxis=dict(
         range=[levels.min() * 0.995, levels.max() * 1.005] if len(levels) > 0 else None,
-        showgrid=True, 
-        gridcolor="rgba(0.3,0.3,0.3.1.0)", 
+        showgrid=True,
+        gridcolor="rgba(0.3,0.3,0.3.1.0)",
         tickfont=dict(size=16)
     ),
-    xaxis=dict(showgrid=True, gridcolor="rgba(0.1,0.1,0.1.1.0)", tickfont=dict(size=14)),
+    xaxis=dict(
+        range=[bar_x_min, bar_x_max],  # Use unified primary axis range
+        showgrid=True,
+        gridcolor="rgba(0.1,0.1,0.1.1.0)",
+        tickfont=dict(size=14),
+        zeroline=True,
+        zerolinewidth=2,
+        zerolinecolor="rgba(255, 218, 3, 0.6)",
+    ),
     xaxis2=dict(
         title="Gamma Profile (billions $ / 1% move)",
+        range=[gamma_x_min, gamma_x_max],  # Use unified secondary axis range
         overlaying="x",
         side="top",
         showgrid=False,
@@ -532,7 +618,7 @@ fig.update_layout(
         orientation="v",  # Vertical layout - one row per entry
         yanchor="bottom",
         y=0.05,  # Position from bottom of chart
-        xanchor="right", 
+        xanchor="right",
         x=0.98,  # Right side
         bgcolor="rgba(200, 200, 200, 0.12)",  # Works in both light/dark modes
         bordercolor="rgba(100, 100, 100, 0.8)",
