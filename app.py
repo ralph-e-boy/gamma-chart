@@ -613,7 +613,7 @@ fig.update_layout(
         zerolinewidth=2,
         zerolinecolor="rgba(255, 218, 3, 0.6)",
     ),
-    height=1000,
+    height=max(800, len(grouped) * 15 + 400),  # Dynamic height: minimum 800px, scale with data points
     legend=dict(
         orientation="v",  # Vertical layout - one row per entry
         yanchor="bottom",
